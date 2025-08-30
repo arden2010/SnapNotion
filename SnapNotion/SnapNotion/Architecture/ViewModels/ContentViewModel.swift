@@ -84,6 +84,20 @@ class ContentViewModel: ObservableObject {
         isLoading = false
     }
     
+    // MARK: - Computed Properties
+    var recentItems: [ContentItem] {
+        return contentItems.prefix(10).map { $0 }
+    }
+    
+    var recentItemsCount: Int {
+        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        return contentItems.filter { $0.timestamp > weekAgo }.count
+    }
+    
+    var favoriteItemsCount: Int {
+        return contentItems.filter { $0.isFavorite }.count
+    }
+    
     // MARK: - Private Methods
     private func setupBindings() {
         // Search and filter binding
