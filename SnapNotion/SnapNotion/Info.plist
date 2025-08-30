@@ -6,5 +6,36 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	
+	<!-- Privacy Usage Descriptions -->
+	<key>NSCameraUsageDescription</key>
+	<string>SnapNotion uses the camera to capture documents, images, and visual content for processing and organization.</string>
+	
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SnapNotion accesses your photo library to import images and documents for intelligent content analysis and organization.</string>
+	
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SnapNotion saves processed images and documents to your photo library when you choose to export them.</string>
+	
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SnapNotion uses the microphone to capture audio notes and voice memos for transcription and organization.</string>
+	
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>SnapNotion converts your voice recordings to text using speech recognition for better searchability and organization.</string>
+	
+	<key>NSContactsUsageDescription</key>
+	<string>SnapNotion accesses your contacts to intelligently tag and organize content related to people you know.</string>
+	
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SnapNotion uses location data to add context to your captured content, helping organize information by location when relevant.</string>
+	
+	<key>NSAppleMusicUsageDescription</key>
+	<string>SnapNotion may access your music library to identify songs and media content you want to capture and organize.</string>
+	
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>SnapNotion sends notifications to alert you about processed content, task reminders, and collaboration updates.</string>
+	
+	<key>NSFileProviderPresenceUsageDescription</key>
+	<string>SnapNotion integrates with file providers to import and organize documents from various cloud services.</string>
 </dict>
 </plist>

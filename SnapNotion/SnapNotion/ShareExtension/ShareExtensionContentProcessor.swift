@@ -8,6 +8,24 @@
 import Foundation
 import UIKit
 
+// MARK: - Share Extension Errors
+enum ShareExtensionError: LocalizedError {
+    case appGroupContainerNotAccessible
+    case fileWriteFailed(String)
+    case contentProcessingFailed(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .appGroupContainerNotAccessible:
+            return "Unable to access App Group container. Please check app configuration."
+        case .fileWriteFailed(let path):
+            return "Failed to write file at path: \(path)"
+        case .contentProcessingFailed(let reason):
+            return "Content processing failed: \(reason)"
+        }
+    }
+}
+
 // MARK: - Share Extension Content Processor
 class ShareExtensionContentProcessor {
     
@@ -16,9 +34,9 @@ class ShareExtensionContentProcessor {
     private let containerURL: URL
     
     // MARK: - Initialization
-    init() {
+    init() throws {
         guard let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
-            fatalError("Unable to access App Group container")
+            throw ShareExtensionError.appGroupContainerNotAccessible
         }
         self.containerURL = url
         setupDirectories()
