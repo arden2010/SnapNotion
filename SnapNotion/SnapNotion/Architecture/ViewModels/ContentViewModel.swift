@@ -137,50 +137,6 @@ class ContentViewModel: ObservableObject {
 }
 
 // MARK: - Content Filter Enum
-enum ContentFilter: CaseIterable, Identifiable {
-    case all
-    case favorites
-    case images
-    case documents
-    case web
-    case bySource(AppSource)
-    
-    var id: String {
-        switch self {
-        case .all: return "all"
-        case .favorites: return "favorites"
-        case .images: return "images"
-        case .documents: return "documents"
-        case .web: return "web"
-        case .bySource(let source): return "source_\(source.rawValue)"
-        }
-    }
-    
-    var displayName: String {
-        switch self {
-        case .all: return "全部"
-        case .favorites: return "收藏"
-        case .images: return "图片"
-        case .documents: return "文档"
-        case .web: return "网页"
-        case .bySource(let source): return source.displayName
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .all: return "doc.on.doc"
-        case .favorites: return "star.fill"
-        case .images: return "photo"
-        case .documents: return "doc.text"
-        case .web: return "globe"
-        case .bySource(let source): return source.icon
-        }
-    }
-    
-    static var allCases: [ContentFilter] {
-        return [.all, .favorites, .images, .documents, .web]
-    }
-}
+// ContentFilter moved to SimpleModels.swift
 
 // SharedContent moved to SimpleModels.swift

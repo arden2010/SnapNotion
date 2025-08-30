@@ -385,7 +385,7 @@ struct ContentRowView: View {
                         
                         // Content type badge
                         Text(item.type.displayName)
-                            .claudeCodeStyle(.caption, color: .tertiary)
+                            .claudeCodeStyle(.caption)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(item.type.color.opacity(0.1))
@@ -629,7 +629,7 @@ struct CaptureOptionButton: View {
                 if isEnabled {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14))
-                        .foregroundColor(.tertiary)
+                        .foregroundColor(Color(.tertiaryLabel))
                 }
             }
             .padding()
@@ -641,68 +641,27 @@ struct CaptureOptionButton: View {
     }
 }
 
-// MARK: - Preview Data
-#if DEBUG
-extension ContentItem {
-    static let sampleData: [ContentItem] = [
-        ContentItem(
-            title: "AI技术前沿探讨",
-            preview: "深入探讨人工智能在内容管理领域的最新应用，包括自然语言处理和知识图谱技术的发展趋势。",
-            source: "Tech Blog",
-            sourceApp: .safari,
-            timestamp: Date().addingTimeInterval(-3600),
-            type: .web,
-            isFavorite: true,
-            attachments: [
-                AttachmentPreview(name: "AI_Report_2024", type: "PDF", size: 2048000, thumbnailPath: nil, fullPath: "/documents/ai_report.pdf"),
-                AttachmentPreview(name: "Chart_Analysis", type: "PNG", size: 512000, thumbnailPath: nil, fullPath: "/images/chart.png")
-            ],
-            metadata: ContentMetadata(),
-            processingStatus: .completed
-        ),
-        ContentItem(
-            title: "产品需求文档",
-            preview: "SnapNotion产品功能规划和用户需求分析，包含核心功能设计和技术架构说明。",
-            source: "Product Team",
-            sourceApp: .files,
-            timestamp: Date().addingTimeInterval(-7200),
-            type: .pdf,
-            isFavorite: false,
-            attachments: [
-                AttachmentPreview(name: "PRD_v2.1", type: "PDF", size: 1024000, thumbnailPath: nil, fullPath: "/documents/prd.pdf")
-            ],
-            metadata: ContentMetadata(),
-            processingStatus: .completed
-        ),
-        ContentItem(
-            title: "会议记录摘要",
-            preview: "技术架构讨论会议要点，包括数据库设计、API接口规范和安全考虑事项。",
-            source: "Meeting Notes",
-            sourceApp: .notes,
-            timestamp: Date().addingTimeInterval(-10800),
-            type: .text,
-            isFavorite: true,
-            attachments: [],
-            metadata: ContentMetadata(),
-            processingStatus: .completed
-        ),
-        ContentItem(
-            title: "微信分享内容",
-            preview: "来自微信的图片和文字内容，正在使用AI进行智能分析处理。",
-            source: "WeChat Share",
-            sourceApp: .wechat,
-            timestamp: Date().addingTimeInterval(-1800),
-            type: .image,
-            isFavorite: false,
-            attachments: [
-                AttachmentPreview(name: "wechat_image", type: "JPG", size: 1536000, thumbnailPath: nil, fullPath: "/images/wechat.jpg")
-            ],
-            metadata: ContentMetadata(),
-            processingStatus: .processing
-        )
-    ]
+// MARK: - Empty State View
+struct EmptyStateView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "tray")
+                .font(.system(size: 64))
+                .foregroundColor(.secondary)
+            
+            Text("No content yet")
+                .font(.title2)
+                .fontWeight(.medium)
+            
+            Text("Tap the + button to start capturing content from any app")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 }
-#endif
 
 private let itemFormatter: DateFormatter = {
     let formatter = DateFormatter()
