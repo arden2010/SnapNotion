@@ -18,32 +18,27 @@ struct ThreePanelNavigationView: View {
                 Color(.systemBackground)
                     .ignoresSafeArea()
                 
-                // Panel Container
-                HStack(spacing: 0) {
-                    // Left Panel
-                    LeftPanelView()
-                        .frame(width: geometry.size.width)
-                        .opacity(navigationController.currentPanel == .left ? 1 : 0)
-                    
-                    // Main Panel
-                    MainPanelView()
-                        .frame(width: geometry.size.width)
-                        .environmentObject(navigationController)
-                    
-                    // Right Panel
-                    RightPanelView()
-                        .frame(width: geometry.size.width)
-                        .opacity(navigationController.currentPanel == .right ? 1 : 0)
-                }
-                .offset(x: -navigationController.panelOffset * geometry.size.width)
-                .animation(.easeInOut(duration: navigationController.isDragging ? 0 : 0.3), value: navigationController.panelOffset)
+                // Simple single panel for now - just show main panel
+                MainPanelView()
+                    .environmentObject(navigationController)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                // Overlay for iPhone/iPad (if needed)
-                if navigationController.deviceType.usesOverlay {
-                    overlayView(geometry: geometry)
+                // Debug overlay to ensure something is visible
+                VStack {
+                    HStack {
+                        Text("SnapNotion")
+                            .font(.title2)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text("Panel: \(navigationController.currentPanel == .main ? "Main" : "Other")")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    Spacer()
                 }
             }
-            .gesture(panGesture)
         }
         .environmentObject(navigationController)
     }
@@ -86,12 +81,62 @@ struct MainPanelView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header with hamburger menu and profile
-            MainPanelHeader()
-                .environmentObject(navigationController)
+            // Simplified Header
+            HStack {
+                Text("SnapNotion")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Spacer()
+                Image(systemName: "flame.fill")
+                    .foregroundColor(.orange)
+            }
+            .padding()
+            .background(Color(.systemBackground))
             
-            // Tab Navigation (5 tabs)
-            TabNavigationView()
+            // Simple content for testing
+            VStack(spacing: 20) {
+                Text("Welcome to SnapNotion")
+                    .font(.title)
+                    .padding()
+                
+                Text("Intelligent Content Management")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                VStack(spacing: 16) {
+                    Button("Dashboard") {
+                        print("Dashboard tapped")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    
+                    Button("Library") {
+                        print("Library tapped")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    
+                    Button("Favorites") {
+                        print("Favorites tapped")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.red)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+                .padding()
+                
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemGroupedBackground))
         }
         .background(Color(.systemBackground))
     }
