@@ -62,6 +62,7 @@ enum ContentType: String, CaseIterable, Codable {
     case text = "text"
     case image = "image"
     case pdf = "pdf"
+    case web = "web"
     case mixed = "mixed"
     
     var displayName: String {
@@ -69,6 +70,7 @@ enum ContentType: String, CaseIterable, Codable {
         case .text: return "Text"
         case .image: return "Image"
         case .pdf: return "PDF"
+        case .web: return "Web"
         case .mixed: return "Mixed"
         }
     }
@@ -78,6 +80,7 @@ enum ContentType: String, CaseIterable, Codable {
         case .text: return .blue
         case .image: return .green
         case .pdf: return .red
+        case .web: return .orange
         case .mixed: return .purple
         }
     }
@@ -87,18 +90,32 @@ enum ContentType: String, CaseIterable, Codable {
         case .text: return "text.alignleft"
         case .image: return "photo"
         case .pdf: return "doc.fill"
+        case .web: return "globe"
         case .mixed: return "doc.on.doc"
         }
     }
 }
 
-enum ContentFilter: String, CaseIterable, Identifiable {
-    case all = "all"
-    case favorites = "favorites"
-    case images = "images"
-    case documents = "documents"
+enum ContentFilter: Identifiable, Equatable, Hashable {
+    case all
+    case favorites
+    case images
+    case documents
+    case web
+    case bySource(AppSource)
     
-    var id: String { rawValue }
+    static var allCases: [ContentFilter] = [.all, .favorites, .images, .documents, .web]
+    
+    var id: String {
+        switch self {
+        case .all: return "all"
+        case .favorites: return "favorites"
+        case .images: return "images"
+        case .documents: return "documents"
+        case .web: return "web"
+        case .bySource(let source): return "bySource-\(source.rawValue)"
+        }
+    }
     
     var displayName: String {
         switch self {
@@ -106,6 +123,8 @@ enum ContentFilter: String, CaseIterable, Identifiable {
         case .favorites: return "Favorites"
         case .images: return "Images"
         case .documents: return "Documents"
+        case .web: return "Web"
+        case .bySource(let source): return source.displayName
         }
     }
     
@@ -115,6 +134,8 @@ enum ContentFilter: String, CaseIterable, Identifiable {
         case .favorites: return "star.fill"
         case .images: return "photo"
         case .documents: return "doc.text"
+        case .web: return "globe"
+        case .bySource(let source): return source.icon
         }
     }
 }
@@ -124,6 +145,12 @@ enum AppSource: String, CaseIterable, Codable {
     case camera = "camera"
     case photos = "photos"
     case safari = "safari"
+    case whatsapp = "whatsapp"
+    case tiktok = "tiktok"
+    case wechat = "wechat"
+    case instagram = "instagram"
+    case twitter = "twitter"
+    case unknown = "unknown"
     case other = "other"
     
     var displayName: String {
@@ -132,6 +159,12 @@ enum AppSource: String, CaseIterable, Codable {
         case .camera: return "Camera"
         case .photos: return "Photos"
         case .safari: return "Safari"
+        case .whatsapp: return "WhatsApp"
+        case .tiktok: return "TikTok"
+        case .wechat: return "WeChat"
+        case .instagram: return "Instagram"
+        case .twitter: return "Twitter"
+        case .unknown: return "Unknown"
         case .other: return "Other"
         }
     }
@@ -142,6 +175,12 @@ enum AppSource: String, CaseIterable, Codable {
         case .camera: return "camera"
         case .photos: return "photo"
         case .safari: return "safari"
+        case .whatsapp: return "message.circle"
+        case .tiktok: return "video.circle"
+        case .wechat: return "message.badge"
+        case .instagram: return "camera.circle"
+        case .twitter: return "bird"
+        case .unknown: return "questionmark.circle"
         case .other: return "app"
         }
     }
@@ -152,6 +191,12 @@ enum AppSource: String, CaseIterable, Codable {
         case .camera: return .green
         case .photos: return .blue
         case .safari: return .cyan
+        case .whatsapp: return .green
+        case .tiktok: return .black
+        case .wechat: return .green
+        case .instagram: return .purple
+        case .twitter: return .blue
+        case .unknown: return .gray
         case .other: return .gray
         }
     }

@@ -220,7 +220,7 @@ struct GmailStyleHeader: View {
                     
                     TextField("搜索智能内容", text: $searchText)
                         .textFieldStyle(.plain)
-                        .claudeCodeStyle(.body)
+                        .font(.body)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)

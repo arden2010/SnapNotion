@@ -31,13 +31,13 @@ class ShareViewController: SLComposeServiceViewController {
     
     override func didSelectPost() {
         guard let content = sharedContent else {
-            completeRequest(returningItems: nil, completionHandler: nil)
+            extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
             return
         }
         
         guard let processor = contentProcessor else {
             showErrorMessage(ShareExtensionError.appGroupContainerNotAccessible)
-            completeRequest(returningItems: nil, completionHandler: nil)
+            extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
             return
         }
         
@@ -58,7 +58,7 @@ class ShareViewController: SLComposeServiceViewController {
                 }
                 
                 // Complete the extension
-                self?.completeRequest(returningItems: nil, completionHandler: nil)
+                self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
             }
         }
     }
@@ -68,7 +68,7 @@ class ShareViewController: SLComposeServiceViewController {
         guard let sourceAppItem = SLComposeSheetConfigurationItem() else { return [] }
         
         sourceAppItem.title = "Source App"
-        sourceAppItem.value = detectSourceApp()
+        sourceAppItem.value = detectSourceApp().rawValue
         sourceAppItem.tapHandler = {
             // Handle source app selection if needed
         }
@@ -230,7 +230,9 @@ class ShareViewController: SLComposeServiceViewController {
     
     private func detectSourceApp() -> AppSource {
         // Try to detect the source app from the extension context
-        guard let host = extensionContext?.inputItems.first?.attachments?.first?.registeredTypeIdentifiers.first else {
+        guard let extensionItem = extensionContext?.inputItems.first as? NSExtensionItem,
+              let attachments = extensionItem.attachments,
+              let host = attachments.first?.registeredTypeIdentifiers.first else {
             return .unknown
         }
         
