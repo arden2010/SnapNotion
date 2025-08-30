@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct TabNavigationView: View {
-    @State private var selectedTab: TabType = .dashboard
+    @State private var selectedTab: TabType = .library
     
     var body: some View {
         VStack(spacing: 0) {

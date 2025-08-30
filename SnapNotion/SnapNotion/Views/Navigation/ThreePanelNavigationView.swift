@@ -93,48 +93,8 @@ struct MainPanelView: View {
             .padding()
             .background(Color(.systemBackground))
             
-            // Simple content for testing
-            VStack(spacing: 20) {
-                Text("Welcome to SnapNotion")
-                    .font(.title)
-                    .padding()
-                
-                Text("Intelligent Content Management")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                VStack(spacing: 16) {
-                    Button("Dashboard") {
-                        print("Dashboard tapped")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    
-                    Button("Library") {
-                        print("Library tapped")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.green)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    
-                    Button("Favorites") {
-                        print("Favorites tapped")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.red)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                }
-                .padding()
-                
-                Spacer()
-            }
+            // Main Content Capture Interface
+            TabNavigationView()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemGroupedBackground))
         }
