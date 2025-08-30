@@ -13,25 +13,25 @@ import Combine
 struct ContentView: View {
     var body: some View {
         TabView {
-            // Tab 1: Main content page (all content types)
+            // Tab 1: All content (inbox style)
             MainContentView()
                 .tabItem {
-                    Image(systemName: "house")
-                    Text("Home")
+                    Image(systemName: "tray.fill")
+                    Text("Inbox")
                 }
             
-            // Tab 2: Content types (library, favorites, tasks)
+            // Tab 2: Organized content (library, favorites, tasks)
             ContentTypesView()
                 .tabItem {
-                    Image(systemName: "folder")
-                    Text("Types")
+                    Image(systemName: "folder.fill")
+                    Text("Organize")
                 }
             
-            // Tab 3: Knowledge graph
+            // Tab 3: Knowledge connections
             KnowledgeGraphView()
                 .tabItem {
-                    Image(systemName: "network")
-                    Text("Graph")
+                    Image(systemName: "brain.head.profile")
+                    Text("Insights")
                 }
         }
     }
