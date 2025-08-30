@@ -1,0 +1,51 @@
+# SwiftFormat configuration file for SnapNotion
+
+# Specify Swift version for accurate parsing
+--swiftversion 5.9
+
+# Enable/disable specific rules
+--enable isEmpty
+--enable sortedImports
+--enable redundantReturn
+--enable redundantSelf
+
+# Disable problematic rules
+--disable wrapMultilineStatementBraces
+
+# Import organization
+--importgrouping testable-bottom
+
+# Code formatting preferences
+--indent 4
+--maxwidth 120
+--tabwidth 4
+--smarttabs disabled
+
+# Header comments
+--header strip
+
+# Wrapping and spacing
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--wrapreturntype if-multiline
+--closingparen same-line
+--commas inline
+
+# Self references
+--self remove
+
+# Semicolons
+--semicolons never
+
+# Trailing closures
+--trailingclosures map,flatMap,compactMap,filter,first,contains
+
+# Binary operators
+--operatorfunc spaced
+
+# Control flow
+--guardelse same-line
+
+# File options
+--exclude Pods,DerivedData,Build,*.generated.swift

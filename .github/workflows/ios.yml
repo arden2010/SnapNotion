@@ -1,0 +1,101 @@
+name: iOS Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_15.0.app/Contents/Developer
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: macOS-13
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '15.0'
+        
+    - name: Cache Swift Package Manager
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/Library/Caches/org.swift.swiftpm/
+          ~/.cache/org.swift.swiftpm/
+        key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+        restore-keys: |
+          ${{ runner.os }}-spm-
+          
+    - name: Install SwiftFormat
+      run: |
+        brew install swiftformat
+        
+    - name: Check code formatting
+      run: |
+        swiftformat --lint --config .swiftformat SnapNotion/
+        
+    - name: Build for testing
+      run: |
+        xcodebuild build-for-testing \
+          -project SnapNotion/SnapNotion.xcodeproj \
+          -scheme SnapNotion \
+          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0' \
+          CODE_SIGNING_ALLOWED=NO
+          
+    - name: Run unit tests
+      run: |
+        xcodebuild test-without-building \
+          -project SnapNotion/SnapNotion.xcodeproj \
+          -scheme SnapNotion \
+          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0' \
+          CODE_SIGNING_ALLOWED=NO
+          
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results
+        path: |
+          ~/Library/Developer/Xcode/DerivedData/*/Logs/Test/*.xcresult
+          
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: macOS-13
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '15.0'
+        
+    - name: Run SwiftLint
+      run: |
+        if ! which swiftlint > /dev/null; then
+          brew install swiftlint
+        fi
+        swiftlint --config .swiftlint.yml
+        
+    - name: Generate code coverage
+      run: |
+        xcodebuild test \
+          -project SnapNotion/SnapNotion.xcodeproj \
+          -scheme SnapNotion \
+          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0' \
+          -enableCodeCoverage YES \
+          CODE_SIGNING_ALLOWED=NO
+          
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage/*.lcov
+        fail_ci_if_error: true
