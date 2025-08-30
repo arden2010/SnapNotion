@@ -1,5 +1,99 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22758" systemVersion="23G93" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="true" userDefinedModelVersionIdentifier="">
+    <!-- Main Content Entity -->
+    <entity name="ContentNode" representedClassName="ContentNode" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="title" attributeType="String" defaultValueString=""/>
+        <attribute name="contentText" optional="YES" attributeType="String"/>
+        <attribute name="contentData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="contentType" attributeType="String" defaultValueString="text"/>
+        <attribute name="sourceApp" attributeType="String" defaultValueString="other"/>
+        <attribute name="sourceURL" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="modifiedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="isFavorite" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="processingStatus" attributeType="String" defaultValueString="pending"/>
+        <attribute name="aiConfidence" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="ocrText" optional="YES" attributeType="String"/>
+        <attribute name="semanticEmbedding" optional="YES" attributeType="Binary"/>
+        <attribute name="metadata" optional="YES" attributeType="Binary"/>
+        <relationship name="tags" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ContentTag" inverseName="contentNodes" inverseEntity="ContentTag"/>
+        <relationship name="attachments" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ContentAttachment" inverseName="parentContent" inverseEntity="ContentAttachment"/>
+        <relationship name="outgoingRelations" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ContentRelation" inverseName="sourceNode" inverseEntity="ContentRelation"/>
+        <relationship name="incomingRelations" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ContentRelation" inverseName="targetNode" inverseEntity="ContentRelation"/>
+        <relationship name="generatedTasks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="GeneratedTask" inverseName="sourceContent" inverseEntity="GeneratedTask"/>
+    </entity>
+
+    <!-- Knowledge Graph Relations -->
+    <entity name="ContentRelation" representedClassName="ContentRelation" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="relationType" attributeType="String" defaultValueString=""/>
+        <attribute name="confidence" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="isUserDefined" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <relationship name="sourceNode" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ContentNode" inverseName="outgoingRelations" inverseEntity="ContentNode"/>
+        <relationship name="targetNode" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ContentNode" inverseName="incomingRelations" inverseEntity="ContentNode"/>
+    </entity>
+
+    <!-- Content Tags -->
+    <entity name="ContentTag" representedClassName="ContentTag" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String" defaultValueString=""/>
+        <attribute name="color" optional="YES" attributeType="String"/>
+        <attribute name="isSystemTag" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="usageCount" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="contentNodes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ContentNode" inverseName="tags" inverseEntity="ContentNode"/>
+    </entity>
+
+    <!-- Content Attachments -->
+    <entity name="ContentAttachment" representedClassName="ContentAttachment" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="fileName" attributeType="String" defaultValueString=""/>
+        <attribute name="fileType" attributeType="String" defaultValueString=""/>
+        <attribute name="fileSize" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="fileData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="thumbnailData" optional="YES" attributeType="Binary"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="parentContent" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ContentNode" inverseName="attachments" inverseEntity="ContentNode"/>
+    </entity>
+
+    <!-- AI-Generated Tasks -->
+    <entity name="GeneratedTask" representedClassName="GeneratedTask" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="title" attributeType="String" defaultValueString=""/>
+        <attribute name="taskDescription" optional="YES" attributeType="String"/>
+        <attribute name="priority" attributeType="String" defaultValueString="medium"/>
+        <attribute name="status" attributeType="String" defaultValueString="pending"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dueDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="completedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="aiConfidence" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="isUserModified" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <relationship name="sourceContent" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ContentNode" inverseName="generatedTasks" inverseEntity="ContentNode"/>
+    </entity>
+
+    <!-- User Workspace -->
+    <entity name="Workspace" representedClassName="Workspace" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String" defaultValueString=""/>
+        <attribute name="isDefault" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="lastAccessedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="settings" optional="YES" attributeType="Binary"/>
+    </entity>
+
+    <!-- Search History -->
+    <entity name="SearchQuery" representedClassName="SearchQuery" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="queryText" attributeType="String" defaultValueString=""/>
+        <attribute name="searchType" attributeType="String" defaultValueString=""/>
+        <attribute name="resultsCount" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="isBookmarked" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+    </entity>
+
+    <!-- Legacy Item Entity (for migration) -->
     <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
         <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
     </entity>

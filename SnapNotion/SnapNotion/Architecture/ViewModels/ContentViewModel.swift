@@ -19,12 +19,26 @@ class ContentViewModel: ObservableObject {
     @Published var searchText: String = ""
     @Published var selectedFilter: ContentFilter = .all
     @Published var isLoading: Bool = false
+    @Published var isLoadingMore: Bool = false
+    @Published var hasMoreContent: Bool = true
     @Published var errorMessage: String?
+    @Published var currentError: SnapNotionError?
+    
+    // MARK: - Pagination Properties
+    private var currentPage: Int = 0
+    private let pageSize: Int = 50
+    private var isInitialLoad: Bool = true
+    private var allContentLoaded: Bool = false
+    
+    // MARK: - Performance Properties
+    private let contentCache = NSCache<NSString, NSArray>()
+    private var backgroundQueue = DispatchQueue(label: "content.processing", qos: .userInitiated)
     
     // MARK: - Private Properties
     private var cancellables = Set<AnyCancellable>()
     private let contentService: ContentServiceProtocol
     private let imageProcessor: ImageProcessorProtocol
+    private let errorRecoveryManager = ErrorRecoveryManager.shared
     
     // MARK: - Initialization
     init(
@@ -33,21 +47,105 @@ class ContentViewModel: ObservableObject {
     ) {
         self.contentService = contentService
         self.imageProcessor = imageProcessor
+        
+        // Configure cache
+        contentCache.countLimit = 200 // Cache up to 200 content items
+        contentCache.totalCostLimit = 50 * 1024 * 1024 // 50MB cache limit
+        
         setupBindings()
-        loadContent()
+        loadInitialContent()
     }
     
-    // MARK: - Public Methods
-    func refreshContent() async {
+    // MARK: - Content Loading Methods
+    
+    /// Load initial content with pagination
+    func loadInitialContent() {
+        guard !isLoading else { return }
+        
         isLoading = true
-        do {
-            let items = try await contentService.fetchAllContent()
-            self.contentItems = items
-            applyFilters()
-        } catch {
-            self.errorMessage = error.localizedDescription
+        isInitialLoad = true
+        currentPage = 0
+        
+        Task {
+            await loadContentPage()
         }
+    }
+    
+    /// Refresh content from the beginning
+    func refreshContent() async {
+        // Clear cache
+        contentCache.removeAllObjects()
+        allContentLoaded = false
+        hasMoreContent = true
+        currentPage = 0
+        contentItems.removeAll()
+        
+        isLoading = true
+        await loadContentPage()
+    }
+    
+    /// Load more content (pagination)
+    func loadMoreContent() {
+        guard !isLoadingMore && hasMoreContent && !allContentLoaded else { return }
+        
+        isLoadingMore = true
+        currentPage += 1
+        
+        Task {
+            await loadContentPage()
+        }
+    }
+    
+    private func loadContentPage() async {
+        do {
+            // Check cache first
+            let cacheKey = "\(currentPage)_\(pageSize)_\(selectedFilter.id)" as NSString
+            
+            let newItems: [ContentItem]
+            if let cachedItems = contentCache.object(forKey: cacheKey) as? [ContentItem] {
+                newItems = cachedItems
+                print("📱 Loaded \(newItems.count) items from cache")
+            } else {
+                // Fetch from service with pagination
+                newItems = try await contentService.fetchContent(
+                    page: currentPage,
+                    pageSize: pageSize,
+                    filter: selectedFilter,
+                    searchQuery: searchText.isEmpty ? nil : searchText
+                )
+                
+                // Cache the results
+                contentCache.setObject(newItems as NSArray, forKey: cacheKey)
+                print("📥 Loaded \(newItems.count) items from service")
+            }
+            
+            // Update UI on main thread
+            if isInitialLoad || currentPage == 0 {
+                contentItems = newItems
+                isInitialLoad = false
+            } else {
+                // Append new items, avoiding duplicates
+                let existingIds = Set(contentItems.map { $0.id })
+                let uniqueNewItems = newItems.filter { !existingIds.contains($0.id) }
+                contentItems.append(contentsOf: uniqueNewItems)
+            }
+            
+            // Update pagination state
+            hasMoreContent = newItems.count == pageSize
+            allContentLoaded = newItems.count < pageSize
+            
+            // Apply filters
+            applyFilters()
+            
+        } catch let error as SnapNotionError {
+            handleError(error, operation: "loadContentPage", context: ["page": currentPage])
+        } catch {
+            let snapNotionError = SnapNotionError.coreDataFetchFailed(entity: "ContentItem")
+            handleError(snapNotionError, operation: "loadContentPage", context: ["underlyingError": error.localizedDescription])
+        }
+        
         isLoading = false
+        isLoadingMore = false
     }
     
     func toggleFavorite(for item: ContentItem) {
