@@ -32,7 +32,7 @@ class ImageProcessor: ImageProcessorProtocol {
     private let aiProcessor: AIProcessorProtocol
     
     // MARK: - Initialization
-    init(aiProcessor: AIProcessorProtocol = AIProcessor.shared) {
+    init(aiProcessor: AIProcessorProtocol = SimpleAIProcessor.shared) {
         self.aiProcessor = aiProcessor
     }
     
@@ -69,7 +69,7 @@ class ImageProcessor: ImageProcessorProtocol {
     }
     
     func generateThumbnail(from imageData: Data, size: CGSize) async throws -> Data {
-        return await Task {
+        return try await Task {
             guard let imageSource = CGImageSourceCreateWithData(imageData as CFData, nil),
                   let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
                 throw ImageProcessorError.thumbnailGenerationFailed
@@ -106,7 +106,7 @@ class ImageProcessor: ImageProcessorProtocol {
     }
     
     func compressImage(_ imageData: Data, quality: CGFloat) async throws -> Data {
-        return await Task {
+        return try await Task {
             guard let image = UIImage(data: imageData) else {
                 throw ImageProcessorError.invalidImageData
             }
@@ -120,7 +120,7 @@ class ImageProcessor: ImageProcessorProtocol {
     }
     
     func extractMetadata(from imageData: Data) async throws -> ImageMetadata {
-        return await Task {
+        return try await Task {
             guard let imageSource = CGImageSourceCreateWithData(imageData as CFData, nil),
                   let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any] else {
                 throw ImageProcessorError.metadataExtractionFailed
@@ -174,7 +174,7 @@ class ImageProcessor: ImageProcessorProtocol {
     }
     
     func optimizeForStorage(_ imageData: Data) async throws -> Data {
-        return await Task {
+        return try await Task {
             guard let image = UIImage(data: imageData) else {
                 throw ImageProcessorError.invalidImageData
             }

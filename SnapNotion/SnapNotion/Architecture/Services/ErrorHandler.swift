@@ -257,7 +257,7 @@ class ErrorHandler: ObservableObject {
     private func sendToAnalytics(_ error: AppError) {
         // In production, send error data to analytics service
         // For privacy, only send error codes and severity, not user data
-        let analyticsData = [
+        let analyticsData: [String: Any] = [
             "errorCode": error.errorCode,
             "severity": String(describing: error.severity),
             "timestamp": Date().timeIntervalSince1970

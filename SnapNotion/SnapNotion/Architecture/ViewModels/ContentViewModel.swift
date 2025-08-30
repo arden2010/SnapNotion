@@ -28,7 +28,7 @@ class ContentViewModel: ObservableObject {
     
     // MARK: - Initialization
     init(
-        contentService: ContentServiceProtocol = ContentService.shared,
+        contentService: ContentServiceProtocol = SimpleContentService.shared,
         imageProcessor: ImageProcessorProtocol = ImageProcessor.shared
     ) {
         self.contentService = contentService
@@ -183,12 +183,4 @@ enum ContentFilter: CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Shared Content Structure
-struct SharedContent {
-    let type: ContentType
-    let data: Data?
-    let text: String?
-    let url: URL?
-    let sourceApp: AppSource
-    let metadata: [String: Any]
-}
+// SharedContent moved to SimpleModels.swift

@@ -7,7 +7,7 @@
 
 import CoreData
 
-struct PersistenceController {
+class PersistenceController {
     static let shared = PersistenceController()
 
     @MainActor
@@ -110,9 +110,10 @@ struct PersistenceController {
     // MARK: - Safe Context Operations
     func performBackgroundTask<T>(_ block: @escaping (NSManagedObjectContext) throws -> T) async throws -> T {
         return try await withCheckedThrowingContinuation { continuation in
-            backgroundContext.perform {
+            let context = self.backgroundContext
+            context.perform {
                 do {
-                    let result = try block(self.backgroundContext)
+                    let result = try block(context)
                     continuation.resume(returning: result)
                 } catch {
                     continuation.resume(throwing: error)

@@ -37,11 +37,9 @@ class SecurityService: SecurityServiceProtocol {
         // Encrypt the data
         let sealedBox = try AES.GCM.seal(data, using: key)
         
-        guard let encryptedData = sealedBox.ciphertext,
-              let tag = sealedBox.tag,
-              let nonce = sealedBox.nonce else {
-            throw SecurityError.encryptionFailed
-        }
+        let encryptedData = sealedBox.ciphertext
+        let tag = sealedBox.tag
+        let nonce = sealedBox.nonce
         
         // Store the key securely in keychain with a unique identifier
         let keyIdentifier = UUID().uuidString
@@ -213,33 +211,3 @@ enum SecurityError: LocalizedError {
     }
 }
 
-// MARK: - Security Service Extension for Shared Content
-extension SecurityService {
-    
-    func encryptSharedContent(_ content: SharedContent) throws -> EncryptedSharedContent {
-        let encoder = JSONEncoder()
-        let contentData = try encoder.encode(content)
-        let encryptedData = try encryptData(contentData)
-        
-        return EncryptedSharedContent(
-            id: content.id,
-            encryptedData: encryptedData,
-            sourceApp: content.sourceApp,
-            timestamp: content.timestamp
-        )
-    }
-    
-    func decryptSharedContent(_ encryptedContent: EncryptedSharedContent) throws -> SharedContent {
-        let decryptedData = try decryptData(encryptedContent.encryptedData)
-        let decoder = JSONDecoder()
-        return try decoder.decode(SharedContent.self, from: decryptedData)
-    }
-}
-
-// MARK: - Encrypted Shared Content
-struct EncryptedSharedContent: Codable {
-    let id: UUID
-    let encryptedData: EncryptedData
-    let sourceApp: AppSource
-    let timestamp: Date
-}
