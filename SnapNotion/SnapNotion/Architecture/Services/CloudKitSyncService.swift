@@ -227,7 +227,7 @@ class CloudKitSyncService: ObservableObject, CloudKitSyncServiceProtocol {
                 _ = try await privateDatabase.save(recordZone)
                 print("📁 CloudKit record zone created/verified")
             } catch let error as CKError {
-                if error.code != .zoneNotEmpty {
+                if error.code != .serverRecordChanged {
                     print("⚠️ Failed to create record zone: \(error)")
                 }
             }
@@ -283,13 +283,9 @@ class CloudKitSyncService: ObservableObject, CloudKitSyncServiceProtocol {
         privateDatabase.add(operation)
         
         // Wait for completion
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             operation.completionBlock = {
-                if let error = operation.error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
-                }
+                continuation.resume()
             }
         }
     }
@@ -339,11 +335,13 @@ class CloudKitSyncService: ObservableObject, CloudKitSyncServiceProtocol {
         let records = try items.compactMap { try? createCKRecord(from: $0) }
         
         do {
-            let savedRecords = try await privateDatabase.modifyRecords(saving: records, deleting: [])
+            let result = try await privateDatabase.modifyRecords(saving: records, deleting: [])
             
-            // Update local items
-            for (item, record) in zip(items, savedRecords) {
-                try await updateLocalContent(item, with: record)
+            // Update local items with saved records
+            for (item, recordID) in zip(items, records.map { $0.recordID }) {
+                if case .success(let record) = result.saveResults[recordID] {
+                    try await updateLocalContent(item, with: record)
+                }
             }
             
         } catch let error as CKError {
@@ -649,16 +647,3 @@ extension Array {
     }
 }
 
-// MARK: - Additional Error Types
-
-extension SnapNotionError {
-    static let cloudKitUnavailable = SnapNotionError.contentProcessingFailed(underlying: "CloudKit is not available")
-    static let cloudKitAccountUnavailable = SnapNotionError.contentProcessingFailed(underlying: "iCloud account is not available")
-    static let cloudKitQuotaExceeded = SnapNotionError.contentProcessingFailed(underlying: "iCloud storage quota exceeded")
-    static let cloudKitZoneBusy = SnapNotionError.contentProcessingFailed(underlying: "CloudKit zone is busy")
-    static let invalidContentID = SnapNotionError.contentProcessingFailed(underlying: "Invalid content ID")
-    
-    static func cloudKitSyncFailed(underlying: String) -> SnapNotionError {
-        return .contentProcessingFailed(underlying: "CloudKit sync failed: \(underlying)")
-    }
-}

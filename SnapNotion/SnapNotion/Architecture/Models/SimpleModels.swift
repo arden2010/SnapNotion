@@ -9,6 +9,9 @@ import Foundation
 import CoreLocation
 import SwiftUI
 
+// Import the ProcessingStatus from ContentProcessingPipeline
+// ProcessingStatus is defined in ContentProcessingPipeline.swift
+
 // MARK: - Basic Content Models for MVP
 struct ContentItem: Identifiable {
     let id: UUID
@@ -36,9 +39,9 @@ struct ContentItem: Identifiable {
     }
 }
 
-enum ProcessingStatus {
-    case pending, processing, completed, failed
-    
+// ProcessingStatus is defined in ContentProcessingPipeline.swift - removed duplicate definition
+// UI extensions for ProcessingStatus
+extension ProcessingStatus {
     var icon: String {
         switch self {
         case .pending: return "clock"
@@ -278,7 +281,7 @@ struct AttachmentPreview: Identifiable {
 
 // MARK: - Simple Service Protocols
 protocol ContentServiceProtocol {
-    func fetchAllContent() async throws -> [ContentItem]
+    func fetchContent(page: Int, pageSize: Int, filter: ContentFilter, searchQuery: String?) async throws -> [ContentItem]
     func processSharedContent(_ content: SharedContent) async throws -> ContentItem
     func toggleFavorite(itemId: UUID) async throws
     func deleteContent(itemId: UUID) async throws

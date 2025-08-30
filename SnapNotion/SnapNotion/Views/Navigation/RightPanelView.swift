@@ -269,30 +269,8 @@ struct AdvancedFeatureCard: View {
     }
 }
 
-// MARK: - Stat Card
-struct StatCard: View {
-    let title: String
-    let value: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .claudeCodeStyle(.header3, color: .primary)
-            
-            Text(title)
-                .claudeCodeStyle(.caption, color: .secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(color.opacity(0.3), lineWidth: 1)
-        )
-    }
-}
+// MARK: - StatCard moved to dedicated file
+// StatCard is now in Views/Components/StatCard.swift
 
 #Preview {
     RightPanelView()

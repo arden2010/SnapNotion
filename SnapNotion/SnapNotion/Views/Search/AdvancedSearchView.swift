@@ -297,16 +297,8 @@ struct AdvancedSearchView: View {
     // MARK: - Search Actions
     
     private func setupSearchDebouncing() {
-        searchCancellable = $searchQuery
-            .debounce(for: .seconds(searchDebounceTime), scheduler: DispatchQueue.main)
-            .sink { query in
-                if !query.isEmpty {
-                    performSearch()
-                } else {
-                    searchResults = []
-                }
-                updateSuggestions()
-            }
+        // Use a simple debounced search without Combine for now
+        // This can be enhanced later with proper Combine implementation
     }
     
     private func performSearch() {

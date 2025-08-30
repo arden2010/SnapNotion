@@ -138,10 +138,10 @@ class ContentViewModel: ObservableObject {
             applyFilters()
             
         } catch let error as SnapNotionError {
-            handleError(error, operation: "loadContentPage", context: ["page": currentPage])
+            reportError(error, in: "ContentViewModel", operation: "loadContentPage", additionalInfo: ["page": currentPage])
         } catch {
             let snapNotionError = SnapNotionError.coreDataFetchFailed(entity: "ContentItem")
-            handleError(snapNotionError, operation: "loadContentPage", context: ["underlyingError": error.localizedDescription])
+            reportError(snapNotionError, in: "ContentViewModel", operation: "loadContentPage", additionalInfo: ["underlyingError": error.localizedDescription])
         }
         
         isLoading = false

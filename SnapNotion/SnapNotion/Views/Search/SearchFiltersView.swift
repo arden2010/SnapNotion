@@ -270,19 +270,7 @@ struct SearchFiltersView: View {
     }
 }
 
-// MARK: - ContentType Extension
-
-extension ContentType {
-    var displayName: String {
-        switch self {
-        case .text: return "Text Documents"
-        case .image: return "Images"
-        case .web: return "Web Pages"
-        case .pdf: return "PDF Documents"
-        case .mixed: return "Mixed Content"
-        }
-    }
-}
+// MARK: - ContentType displayName extension is in SimpleModels.swift
 
 #Preview {
     SearchFiltersView(

@@ -16,8 +16,43 @@ class SimpleContentService: ContentServiceProtocol {
     
     private init() {}
     
-    func fetchAllContent() async throws -> [ContentItem] {
-        return contentItems
+    func fetchContent(page: Int, pageSize: Int, filter: ContentFilter, searchQuery: String?) async throws -> [ContentItem] {
+        var filtered = contentItems
+        
+        // Apply search filter if provided
+        if let query = searchQuery, !query.isEmpty {
+            filtered = filtered.filter { item in
+                item.title.localizedCaseInsensitiveContains(query) ||
+                item.preview.localizedCaseInsensitiveContains(query) ||
+                item.source.localizedCaseInsensitiveContains(query)
+            }
+        }
+        
+        // Apply content filter
+        switch filter {
+        case .all:
+            break
+        case .favorites:
+            filtered = filtered.filter { $0.isFavorite }
+        case .images:
+            filtered = filtered.filter { $0.type == .image }
+        case .documents:
+            filtered = filtered.filter { $0.type == .pdf || $0.type == .text }
+        case .web:
+            filtered = filtered.filter { $0.type == .web }
+        case .bySource(let source):
+            filtered = filtered.filter { $0.source == source.displayName }
+        }
+        
+        // Apply pagination
+        let startIndex = page * pageSize
+        let endIndex = min(startIndex + pageSize, filtered.count)
+        
+        guard startIndex < filtered.count else {
+            return []
+        }
+        
+        return Array(filtered[startIndex..<endIndex])
     }
     
     func processSharedContent(_ content: SharedContent) async throws -> ContentItem {

@@ -47,12 +47,25 @@ struct SearchResult: Identifiable, Equatable {
         case semanticMatch
         case hybridMatch
     }
+    
+    static func == (lhs: SearchResult, rhs: SearchResult) -> Bool {
+        return lhs.contentId == rhs.contentId && 
+               lhs.title == rhs.title && 
+               lhs.preview == rhs.preview &&
+               lhs.relevanceScore == rhs.relevanceScore
+    }
 }
 
-struct TextHighlight {
+struct TextHighlight: Equatable {
     let range: NSRange
     let matchedText: String
     let confidence: Double
+    
+    static func == (lhs: TextHighlight, rhs: TextHighlight) -> Bool {
+        return lhs.range == rhs.range && 
+               lhs.matchedText == rhs.matchedText && 
+               lhs.confidence == rhs.confidence
+    }
 }
 
 struct SearchSuggestion {
@@ -242,7 +255,7 @@ class AdvancedSearchService: ObservableObject, SearchServiceProtocol {
         for (contentId, embedding) in semanticIndex {
             let similarity = cosineSimilarity(queryEmbedding, embedding)
             
-            if similarity > semanticThreshold {
+            if similarity > Float(semanticThreshold) {
                 if let content = await getContent(by: contentId) {
                     let result = SearchResult(
                         contentId: contentId,
@@ -307,7 +320,7 @@ class AdvancedSearchService: ObservableObject, SearchServiceProtocol {
         for (term, contentIds) in fullTextIndex {
             for queryTerm in queryTerms {
                 let similarity = levenshteinSimilarity(queryTerm.lowercased(), term)
-                if similarity > fuzzyThreshold {
+                if similarity > Float(fuzzyThreshold) {
                     for contentId in contentIds {
                         if let content = await getContent(by: contentId) {
                             let result = SearchResult(

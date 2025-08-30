@@ -45,7 +45,9 @@ class SmartClipboardService: NSObject, ObservableObject {
     }
     
     deinit {
-        stopMonitoring()
+        Task { @MainActor in
+            stopMonitoring()
+        }
     }
     
     // MARK: - Public API
@@ -62,10 +64,10 @@ class SmartClipboardService: NSObject, ObservableObject {
         // 1. URLs (highest priority for web content)
         if let url = pasteboard.url {
             return SharedContent(
-                type: .url,
+                type: .web,
                 data: nil,
                 text: url.absoluteString,
-                url: url.absoluteString,
+                url: url,
                 sourceApp: sourceApp,
                 metadata: createMetadata(for: url)
             )
@@ -90,7 +92,7 @@ class SmartClipboardService: NSObject, ObservableObject {
             
             // Detect if it's a URL in text format
             if isValidURL(string) {
-                contentType = .url
+                contentType = .web
             } else if containsHTMLTags(string) {
                 contentType = .mixed
             } else {
@@ -101,7 +103,7 @@ class SmartClipboardService: NSObject, ObservableObject {
                 type: contentType,
                 data: string.data(using: .utf8),
                 text: string,
-                url: isValidURL(string) ? string : nil,
+                url: isValidURL(string) ? URL(string: string) : nil,
                 sourceApp: sourceApp,
                 metadata: createMetadata(for: string)
             )
@@ -250,7 +252,7 @@ class SmartClipboardService: NSObject, ObservableObject {
         
         // Content-specific suggestions
         switch content.type {
-        case .url:
+        case .web:
             suggestions.append(ClipboardSuggestion(
                 id: UUID(),
                 title: "Archive Web Page",
@@ -319,7 +321,7 @@ class SmartClipboardService: NSObject, ObservableObject {
         if provider.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) {
             // PDF document
             return SharedContent(
-                type: .document,
+                type: .pdf,
                 data: nil, // Would need to load asynchronously
                 text: nil,
                 url: nil,

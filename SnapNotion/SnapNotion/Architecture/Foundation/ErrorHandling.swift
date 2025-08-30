@@ -27,7 +27,13 @@ enum SnapNotionError: Error, Equatable, LocalizedError {
     case dataCorruption(entity: String, objectID: String)
     
     // Synchronization Errors
-    case cloudKitSyncFailed(reason: String)
+    case cloudKitSyncFailed(underlying: String)
+    case cloudKitUnavailable
+    case cloudKitAccountUnavailable
+    case cloudKitQuotaExceeded
+    case cloudKitZoneBusy
+    case invalidContentID
+    case networkConnectionFailed
     case syncConflict(localVersion: String, remoteVersion: String)
     case networkUnavailable
     case quotaExceeded(current: Int64, limit: Int64)
@@ -73,8 +79,20 @@ enum SnapNotionError: Error, Equatable, LocalizedError {
             return "Data migration failed from \(from) to \(to)"
         case .dataCorruption(let entity, let objectID):
             return "Data corruption detected in \(entity): \(objectID)"
-        case .cloudKitSyncFailed(let reason):
-            return "Cloud sync failed: \(reason)"
+        case .cloudKitSyncFailed(let underlying):
+            return "Cloud sync failed: \(underlying)"
+        case .cloudKitUnavailable:
+            return "CloudKit service is unavailable"
+        case .cloudKitAccountUnavailable:
+            return "iCloud account is not available. Please sign in to iCloud in Settings"
+        case .cloudKitQuotaExceeded:
+            return "iCloud storage quota exceeded. Please free up space or upgrade your storage plan"
+        case .cloudKitZoneBusy:
+            return "CloudKit zone is busy. Please try again later"
+        case .invalidContentID:
+            return "Invalid content ID provided"
+        case .networkConnectionFailed:
+            return "Network connection failed"
         case .syncConflict(let local, let remote):
             return "Sync conflict between local (\(local)) and remote (\(remote)) versions"
         case .networkUnavailable:

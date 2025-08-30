@@ -61,11 +61,11 @@ class ContentProcessingPipeline: ObservableObject {
     /// Process existing content node with updated AI capabilities
     func reprocessContent(_ contentNode: ContentNode) async throws -> ContentNode {
         let sharedContent = SharedContent(
-            type: ContentType(rawValue: contentNode.contentType) ?? .mixed,
+            type: ContentType(rawValue: contentNode.contentType ?? "text") ?? .mixed,
             data: contentNode.contentData,
             text: contentNode.contentText,
-            url: contentNode.sourceURL,
-            sourceApp: AppSource(rawValue: contentNode.sourceApp) ?? .other,
+            url: contentNode.sourceURL.flatMap { URL(string: $0) },
+            sourceApp: AppSource(rawValue: contentNode.sourceApp ?? "other") ?? .other,
             metadata: extractMetadata(from: contentNode)
         )
         
@@ -142,11 +142,11 @@ class ContentProcessingPipeline: ObservableObject {
         
         // Process different content types
         switch content.type {
-        case .url:
-            if let urlString = content.url, let url = URL(string: urlString) {
+        case .web:
+            if let url = content.url {
                 updatedResult.extractedText = try await extractWebContent(from: url)
             }
-        case .document:
+        case .pdf:
             if let data = content.data {
                 updatedResult.extractedText = try await extractDocumentContent(from: data)
             }
@@ -232,7 +232,7 @@ class ContentProcessingPipeline: ObservableObject {
         contentNode.contentData = result.originalContent.data
         contentNode.contentType = result.originalContent.type.rawValue
         contentNode.sourceApp = result.originalContent.sourceApp.rawValue
-        contentNode.sourceURL = result.originalContent.url
+        contentNode.sourceURL = result.originalContent.url?.absoluteString
         contentNode.createdAt = Date()
         contentNode.modifiedAt = Date()
         contentNode.ocrText = result.ocrText
@@ -433,7 +433,7 @@ class OCRProcessor {
             throw SnapNotionError.ocrExtractionFailed(reason: "Invalid image data")
         }
         
-        return try await withCheckedThrowingContinuation { continuation in
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<OCRResult, Error>) in
             let request = VNRecognizeTextRequest { request, error in
                 if let error = error {
                     continuation.resume(throwing: error)
@@ -450,9 +450,17 @@ class OCRProcessor {
                 }
                 
                 let combinedText = recognizedStrings.joined(separator: "\n")
-                let confidence = observations.isEmpty ? 0.0 : 
-                    observations.map { $0.topCandidates(1).first?.confidence ?? 0.0 }
-                    .reduce(0.0, +) / Double(observations.count)
+                
+                // Calculate average confidence
+                let confidence: Double
+                if observations.isEmpty {
+                    confidence = 0.0
+                } else {
+                    let confidenceSum = observations.reduce(0.0) { sum, observation in
+                        return sum + Double(observation.topCandidates(1).first?.confidence ?? 0.0)
+                    }
+                    confidence = confidenceSum / Double(observations.count)
+                }
                 
                 let result = OCRResult(text: combinedText, confidence: confidence)
                 continuation.resume(returning: result)

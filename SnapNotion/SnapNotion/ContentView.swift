@@ -12,7 +12,28 @@ import Combine
 
 struct ContentView: View {
     var body: some View {
-        ThreePanelNavigationView()
+        TabView {
+            // Tab 1: Main content page (all content types)
+            MainContentView()
+                .tabItem {
+                    Image(systemName: "house")
+                    Text("Home")
+                }
+            
+            // Tab 2: Content types (library, favorites, tasks)
+            ContentTypesView()
+                .tabItem {
+                    Image(systemName: "folder")
+                    Text("Types")
+                }
+            
+            // Tab 3: Knowledge graph
+            KnowledgeGraphView()
+                .tabItem {
+                    Image(systemName: "network")
+                    Text("Graph")
+                }
+        }
     }
 }
 
