@@ -15,7 +15,9 @@ class ShareViewController: SLComposeServiceViewController {
     
     // MARK: - Properties
     private var sharedContent: SharedContent?
-    private let contentProcessor = ShareExtensionContentProcessor()
+    private lazy var contentProcessor: ShareExtensionContentProcessor? = {
+        return try? ShareExtensionContentProcessor()
+    }()
     
     // MARK: - Lifecycle
     override func isContentValid() -> Bool {
@@ -33,12 +35,18 @@ class ShareViewController: SLComposeServiceViewController {
             return
         }
         
+        guard let processor = contentProcessor else {
+            showErrorMessage(ShareExtensionError.appGroupContainerNotAccessible)
+            completeRequest(returningItems: nil, completionHandler: nil)
+            return
+        }
+        
         // Add user's comment if provided
         let userText = contentText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let finalContent = content.withAdditionalText(userText)
         
         // Process and save content
-        contentProcessor.processSharedContent(finalContent) { [weak self] result in
+        processor.processSharedContent(finalContent) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success:

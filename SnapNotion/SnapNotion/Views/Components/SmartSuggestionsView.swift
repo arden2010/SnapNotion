@@ -142,29 +142,6 @@ struct SmartSuggestionCard: View {
     }
 }
 
-// MARK: - Empty State View
-struct EmptyStateView: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "doc.on.doc")
-                .font(.system(size: 60))
-                .foregroundColor(.secondary)
-            
-            VStack(spacing: 8) {
-                Text("没有内容")
-                    .claudeCodeStyle(.header3)
-                
-                Text("点击右下角的 + 按钮开始添加内容")
-                    .claudeCodeStyle(.body, color: .secondary)
-                    .multilineTextAlignment(.center)
-            }
-            
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
-    }
-}
 
 #Preview {
     SmartSuggestionsView(

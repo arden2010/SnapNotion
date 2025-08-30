@@ -8,6 +8,7 @@
 import SwiftUI
 import AVFoundation
 import Photos
+import VisionKit
 
 // MARK: - Camera Capture View
 struct CameraCaptureView: UIViewControllerRepresentable {
@@ -306,5 +307,3 @@ class ScreenCaptureDetector: ObservableObject {
     }
 }
 
-// MARK: - VisionKit Import
-import VisionKit

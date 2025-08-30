@@ -11,6 +11,7 @@ import ImageIO
 import CoreImage
 import CoreLocation
 import Photos
+import UniformTypeIdentifiers
 
 // MARK: - Image Processor Protocol
 protocol ImageProcessorProtocol {
