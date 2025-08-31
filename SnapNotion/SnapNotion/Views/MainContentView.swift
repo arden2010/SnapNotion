@@ -11,6 +11,7 @@ struct MainContentView: View {
     @StateObject private var viewModel = ContentViewModel()
     @StateObject private var clipboardMonitor = ClipboardMonitor()
     @StateObject private var screenshotDetector = ScreenshotDetectionManager.shared
+    @StateObject private var taskManager = TaskManager()
     
     @State private var showingAddSheet = false
     @State private var showingOptionsMenu = false
@@ -37,7 +38,7 @@ struct MainContentView: View {
                     .padding(.horizontal)
                     
                     // Inbox View - Shows tasks and content by sources separately
-                    InboxContentView(viewStyle: selectedViewStyle)
+                    InboxContentView(viewStyle: selectedViewStyle, viewModel: viewModel, taskManager: taskManager)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .navigationTitle("Inbox")
@@ -98,7 +99,40 @@ struct MainContentView: View {
         guard let clipboardContent = clipboardMonitor.getClipboardContent() else { return }
         
         Task {
+            // Process the content
             await viewModel.processSharedContent(clipboardContent)
+            
+            // Generate tasks from the content if it contains actionable items
+            await generateTasksFromContent(clipboardContent)
+        }
+    }
+    
+    private func generateTasksFromContent(_ content: SharedContent) async {
+        // Simple task detection - look for action words in text
+        guard let text = content.text, !text.isEmpty else { return }
+        
+        let actionWords = ["generate", "create", "make", "build", "implement", "add", "fix", "update", "review", "test", "deploy", "write", "send", "call", "schedule", "complete", "finish", "submit"]
+        let lowercaseText = text.lowercased()
+        
+        // Check if text contains action words
+        let containsAction = actionWords.first { lowercaseText.contains($0) }
+        
+        if let actionWord = containsAction {
+            // Create a task based on the content
+            let taskTitle = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let taskDescription = "Auto-generated from clipboard: \(content.sourceApp.displayName)"
+            
+            let newTask = SimpleTaskItem(
+                title: String(taskTitle.prefix(100)), // Limit title length
+                description: taskDescription,
+                isCompleted: false,
+                priority: .medium,
+                dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()) // Due tomorrow
+            )
+            
+            await MainActor.run {
+                taskManager.tasks.insert(newTask, at: 0)
+            }
         }
     }
     
@@ -162,6 +196,9 @@ struct MainContentView: View {
                     // Refresh the view model to show new content
                     viewModel.loadInitialContent()
                 }
+                
+                // Generate tasks from the processed content (outside MainActor.run)
+                await generateTasksFromContent(clipboardContent)
                 
             } catch {
                 await MainActor.run {
@@ -430,8 +467,8 @@ struct ContentContextMenu: View {
 // MARK: - Inbox Content View
 struct InboxContentView: View {
     let viewStyle: ContentViewStyle
-    @StateObject private var viewModel = ContentViewModel()
-    @StateObject private var taskManager = TaskManager()
+    @ObservedObject var viewModel: ContentViewModel
+    @ObservedObject var taskManager: TaskManager
     
     var body: some View {
         switch viewStyle {
