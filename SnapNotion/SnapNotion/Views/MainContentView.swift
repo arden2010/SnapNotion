@@ -37,7 +37,7 @@ struct MainContentView: View {
                     .padding(.horizontal)
                     
                     // Inbox View - Shows tasks and content by sources separately
-                    InboxContentView()
+                    InboxContentView(viewStyle: selectedViewStyle)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .navigationTitle("Inbox")
@@ -429,10 +429,25 @@ struct ContentContextMenu: View {
 
 // MARK: - Inbox Content View
 struct InboxContentView: View {
+    let viewStyle: ContentViewStyle
     @StateObject private var viewModel = ContentViewModel()
     @StateObject private var taskManager = TaskManager()
     
     var body: some View {
+        switch viewStyle {
+        case .standard:
+            standardInboxView
+        case .compact:
+            compactInboxView
+        case .detailed:
+            detailedInboxView
+        case .grid:
+            gridInboxView
+        }
+    }
+    
+    // MARK: - Standard View
+    private var standardInboxView: some View {
         ScrollView {
             VStack(spacing: 20) {
                 // Tasks Section
@@ -523,6 +538,280 @@ struct InboxContentView: View {
                         }
                         .padding(.horizontal)
                     }
+                }
+                
+                Spacer(minLength: 100) // Space for FAB
+            }
+        }
+        .onAppear {
+            viewModel.loadInitialContent()
+        }
+    }
+    
+    // MARK: - Compact View
+    private var compactInboxView: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                // Compact Tasks Section
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "checklist")
+                            .foregroundColor(.orange)
+                            .font(.subheadline)
+                        
+                        Text("What's Next")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        Text("\(taskManager.tasks.filter { !$0.isCompleted }.count)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
+                    
+                    if taskManager.tasks.isEmpty {
+                        Text("All caught up!")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    } else {
+                        LazyVStack(spacing: 4) {
+                            ForEach(taskManager.tasks.prefix(3)) { task in
+                                CompactTaskRow(task: task)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Compact Content Section
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "folder.badge")
+                            .foregroundColor(.blue)
+                            .font(.subheadline)
+                        
+                        Text("Latest Captured")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        Text("\(viewModel.recentItems.count)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
+                    
+                    LazyVStack(spacing: 4) {
+                        ForEach(viewModel.recentItems.prefix(8)) { item in
+                            CompactContentRowView(
+                                item: item,
+                                onFavoriteToggle: { viewModel.toggleFavorite(for: item) },
+                                onDelete: { viewModel.deleteItem(item) }
+                            )
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+                
+                Spacer(minLength: 100) // Space for FAB
+            }
+        }
+        .onAppear {
+            viewModel.loadInitialContent()
+        }
+    }
+    
+    // MARK: - Detailed View
+    private var detailedInboxView: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Detailed Tasks Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "checklist")
+                            .foregroundColor(.orange)
+                            .font(.title3)
+                        
+                        Text("What's Next")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(taskManager.tasks.filter { !$0.isCompleted }.count) active")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Text("\(taskManager.tasks.filter { $0.isCompleted }.count) completed")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.horizontal)
+                    
+                    if taskManager.tasks.isEmpty {
+                        VStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle")
+                                .font(.title3)
+                                .foregroundColor(.green)
+                            
+                            Text("No tasks yet!")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(height: 60)
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        LazyVStack(spacing: 8) {
+                            ForEach(taskManager.tasks.prefix(5)) { task in
+                                DetailedTaskRow(task: task)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Detailed Content Section with full source info
+                ForEach(contentBySource, id: \.source) { sourceGroup in
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: sourceGroup.source.icon)
+                                .foregroundColor(sourceGroup.source.color)
+                                .font(.title3)
+                            
+                            Text(sourceGroup.source.displayName)
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            
+                            Spacer()
+                            
+                            Text("\(sourceGroup.items.count) items")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal)
+                        
+                        LazyVStack(spacing: 8) {
+                            ForEach(sourceGroup.items) { item in
+                                DetailedContentRowView(
+                                    item: item,
+                                    onFavoriteToggle: { viewModel.toggleFavorite(for: item) },
+                                    onDelete: { viewModel.deleteItem(item) }
+                                )
+                                .padding(.horizontal)
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(minLength: 100) // Space for FAB
+            }
+        }
+        .onAppear {
+            viewModel.loadInitialContent()
+        }
+    }
+    
+    // MARK: - Grid View
+    private var gridInboxView: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Grid Tasks Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "checklist")
+                            .foregroundColor(.orange)
+                            .font(.title3)
+                        
+                        Text("What's Next")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        Text("\(taskManager.tasks.filter { !$0.isCompleted }.count) active")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
+                    
+                    if taskManager.tasks.isEmpty {
+                        VStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle")
+                                .font(.title2)
+                                .foregroundColor(.green)
+                            
+                            Text("No tasks yet!")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(height: 80)
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        // Tasks in horizontal scroll
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(taskManager.tasks.prefix(5)) { task in
+                                    GridTaskCard(task: task)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Grid Content Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "folder.badge")
+                            .foregroundColor(.blue)
+                            .font(.title3)
+                        
+                        Text("Latest Captured")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        Text("\(viewModel.recentItems.count) items")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
+                    
+                    LazyVGrid(columns: [
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12)
+                    ], spacing: 12) {
+                        ForEach(viewModel.recentItems.prefix(10)) { item in
+                            GridContentCard(item: item)
+                                .contextMenu {
+                                    ContentContextMenu(
+                                        item: item,
+                                        onFavoriteToggle: { viewModel.toggleFavorite(for: item) },
+                                        onEdit: { /* Handle edit */ },
+                                        onShare: { /* Handle share */ },
+                                        onDelete: { viewModel.deleteItem(item) }
+                                    )
+                                }
+                        }
+                    }
+                    .padding(.horizontal)
                 }
                 
                 Spacer(minLength: 100) // Space for FAB
