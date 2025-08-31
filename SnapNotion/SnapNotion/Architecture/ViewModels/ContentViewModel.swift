@@ -42,11 +42,11 @@ class ContentViewModel: ObservableObject {
     
     // MARK: - Initialization
     init(
-        contentService: ContentServiceProtocol = SimpleContentService.shared,
-        imageProcessor: ImageProcessorProtocol = ImageProcessor.shared
+        contentService: ContentServiceProtocol? = nil,
+        imageProcessor: ImageProcessorProtocol? = nil
     ) {
-        self.contentService = contentService
-        self.imageProcessor = imageProcessor
+        self.contentService = contentService ?? SimpleContentService.shared
+        self.imageProcessor = imageProcessor ?? ImageProcessor.shared
         
         // Configure cache
         contentCache.countLimit = 200 // Cache up to 200 content items

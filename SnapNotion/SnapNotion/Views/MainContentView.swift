@@ -9,53 +9,36 @@ import SwiftUI
 
 struct MainContentView: View {
     @StateObject private var viewModel = ContentViewModel()
+    @StateObject private var clipboardMonitor = ClipboardMonitor()
+    @StateObject private var screenshotDetector = ScreenshotDetectionManager.shared
     
     @State private var showingAddSheet = false
+    @State private var showingOptionsMenu = false
     @State private var selectedViewStyle: ContentViewStyle = .standard
+    @State private var showingProcessing = false
+    @State private var processingMessage = ""
+    private let contentProcessor = ContentCaptureProcessor.shared
     
     var body: some View {
         NavigationView {
             ZStack {
                 VStack(spacing: 0) {
-                    // Content List - Gmail style
-                    if viewModel.isLoading {
-                        ProgressView("Loading...")
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if viewModel.filteredItems.isEmpty {
-                        VStack(spacing: 16) {
-                            Image(systemName: "tray")
-                                .font(.system(size: 48))
-                                .foregroundColor(.secondary)
-                            
-                            Text("No content yet")
-                                .font(.title2)
-                                .foregroundColor(.secondary)
-                            
-                            Text("Content you capture will appear here")
-                                .font(.body)
-                                .foregroundColor(.secondary)
+                    // Smart Suggestions for Clipboard and Screenshot
+                    SmartSuggestionsView(
+                        clipboardMonitor: clipboardMonitor,
+                        screenshotDetector: screenshotDetector,
+                        onClipboardPaste: {
+                            handleClipboardPaste()
+                        },
+                        onScreenshotCapture: {
+                            handleScreenshotCapture()
                         }
+                    )
+                    .padding(.horizontal)
+                    
+                    // Inbox View - Shows tasks and content by sources separately
+                    InboxContentView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        // View Content Based on Selected Style
-                        switch selectedViewStyle {
-                        case .standard:
-                            // Dashboard Overview (Standard View)
-                            InboxDashboardView(viewModel: viewModel)
-                            
-                        case .grid:
-                            // Grid Layout with Tasks and Content Sections
-                            GridInboxView(viewModel: viewModel)
-                            
-                        case .compact:
-                            // Compact Layout with Tasks and Content Sections
-                            CompactInboxView(viewModel: viewModel)
-                            
-                        case .detailed:
-                            // Detailed Layout with Tasks and Content Sections
-                            DetailedInboxView(viewModel: viewModel)
-                        }
-                    }
                 }
                 .navigationTitle("Inbox")
                 .toolbar {
@@ -75,23 +58,19 @@ struct MainContentView: View {
                     }
                 }
                 
-                // Floating Action Button (FAB) - Gmail style
+                // Smart Floating Action Button
                 VStack {
                     Spacer()
                     HStack {
                         Spacer()
-                        Button(action: {
-                            showingAddSheet = true
-                        }) {
-                            Image(systemName: "plus")
-                                .font(.title2)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                        }
-                        .frame(width: 56, height: 56)
-                        .background(Color.phoenixOrange)
-                        .clipShape(Circle())
-                        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                        SmartFloatingActionButton(
+                            onPaste: {
+                                handleSmartPasteAction()
+                            },
+                            onLongPress: {
+                                showingOptionsMenu = true
+                            }
+                        )
                         .padding(.trailing, 20)
                         .padding(.bottom, 20)
                     }
@@ -101,8 +80,99 @@ struct MainContentView: View {
         .sheet(isPresented: $showingAddSheet) {
             AddContentSheet()
         }
+        .sheet(isPresented: $showingOptionsMenu) {
+            ContentOptionsMenu()
+        }
+        .overlay {
+            if showingProcessing {
+                ProcessingOverlay(message: processingMessage)
+            }
+        }
         .onAppear {
             // Load content when view appears
+        }
+    }
+    
+    // MARK: - Action Handlers
+    private func handleClipboardPaste() {
+        guard let clipboardContent = clipboardMonitor.getClipboardContent() else { return }
+        
+        Task {
+            await viewModel.processSharedContent(clipboardContent)
+        }
+    }
+    
+    private func handleScreenshotCapture() {
+        // Screenshot capture is handled automatically by ScreenshotDetectionManager
+        print("Screenshot capture triggered from UI")
+    }
+    
+    private func handleSmartPasteAction() {
+        guard let clipboardContent = clipboardMonitor.getClipboardContent() else {
+            return
+        }
+        
+        Task {
+            await MainActor.run {
+                showingProcessing = true
+                processingMessage = "📋 Processing clipboard content..."
+            }
+            
+            do {
+                let result: ContentItem
+                
+                switch clipboardContent.type {
+                case .text:
+                    if let text = clipboardContent.text {
+                        result = try await contentProcessor.processText(text, source: "Smart FAB - Inbox")
+                    } else {
+                        throw ContentProcessingError.aiProcessingFailed
+                    }
+                    
+                case .image:
+                    if let imageData = clipboardContent.data {
+                        result = try await contentProcessor.processImage(imageData, source: "Smart FAB - Inbox")
+                    } else {
+                        throw ContentProcessingError.imageConversionFailed
+                    }
+                    
+                case .web:
+                    if let url = clipboardContent.url {
+                        result = try await contentProcessor.processWebURL(url, source: "Smart FAB - Inbox")
+                    } else {
+                        throw ContentProcessingError.aiProcessingFailed
+                    }
+                    
+                case .mixed, .pdf:
+                    if let text = clipboardContent.text {
+                        result = try await contentProcessor.processText(text, source: "Smart FAB - Inbox")
+                    } else {
+                        throw ContentProcessingError.aiProcessingFailed
+                    }
+                }
+                
+                await MainActor.run {
+                    processingMessage = "✅ Content processed successfully!"
+                    
+                    // Brief success message then dismiss
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self.showingProcessing = false
+                    }
+                    
+                    // Refresh the view model to show new content
+                    viewModel.loadInitialContent()
+                }
+                
+            } catch {
+                await MainActor.run {
+                    processingMessage = "❌ Failed to process: \(error.localizedDescription)"
+                    
+                    // Show error for a moment then dismiss
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        self.showingProcessing = false
+                    }
+                }
+            }
         }
     }
 }
@@ -357,7 +427,212 @@ struct ContentContextMenu: View {
     }
 }
 
-// MARK: - Inbox Dashboard View
+// MARK: - Inbox Content View
+struct InboxContentView: View {
+    @StateObject private var viewModel = ContentViewModel()
+    @StateObject private var taskManager = TaskManager()
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Tasks Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "checklist")
+                            .foregroundColor(.orange)
+                            .font(.title3)
+                        
+                        Text("Tasks")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        Text("\(taskManager.tasks.filter { !$0.isCompleted }.count) active")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
+                    
+                    if taskManager.tasks.isEmpty {
+                        VStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle")
+                                .font(.title2)
+                                .foregroundColor(.green)
+                            
+                            Text("No tasks yet!")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(height: 80)
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        LazyVStack(spacing: 8) {
+                            ForEach(taskManager.tasks.prefix(5)) { task in
+                                TaskSummaryCard(task: task)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Content by Source Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "folder.badge")
+                            .foregroundColor(.blue)
+                            .font(.title3)
+                        
+                        Text("Content by Source")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        Text("\(viewModel.recentItems.count) items")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
+                    
+                    if viewModel.recentItems.isEmpty {
+                        VStack(spacing: 8) {
+                            Image(systemName: "doc.badge.plus")
+                                .font(.title2)
+                                .foregroundColor(.gray)
+                            
+                            Text("No content captured yet")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(height: 80)
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(contentBySource, id: \.source) { sourceGroup in
+                                SourceContentSection(
+                                    sourceGroup: sourceGroup,
+                                    onItemTap: { item in
+                                        // Handle item tap
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                
+                Spacer(minLength: 100) // Space for FAB
+            }
+        }
+        .onAppear {
+            viewModel.loadInitialContent()
+        }
+    }
+    
+    // Group content by source
+    private var contentBySource: [ContentSourceGroup] {
+        let grouped = Dictionary(grouping: viewModel.recentItems) { $0.sourceApp }
+        return grouped.compactMap { (source, items) in
+            ContentSourceGroup(
+                source: source,
+                items: Array(items.sorted { $0.timestamp > $1.timestamp }.prefix(5)) // Show max 5 items per source, sorted by newest first
+            )
+        }.sorted { $0.source.displayName < $1.source.displayName }
+    }
+}
+
+// MARK: - Source Content Section
+struct SourceContentSection: View {
+    let sourceGroup: ContentSourceGroup
+    let onItemTap: (ContentItem) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Source Header
+            HStack {
+                Image(systemName: sourceGroup.source.icon)
+                    .foregroundColor(sourceGroup.source.color)
+                    .font(.title3)
+                
+                Text(sourceGroup.source.displayName)
+                    .font(.headline)
+                    .fontWeight(.medium)
+                
+                Spacer()
+                
+                Text("\(sourceGroup.items.count)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(6)
+            }
+            
+            // Content Items
+            ForEach(sourceGroup.items) { item in
+                Button(action: {
+                    onItemTap(item)
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: item.type.icon)
+                            .foregroundColor(item.type.color)
+                            .font(.subheadline)
+                            .frame(width: 24)
+                        
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(item.title)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                            
+                            Text(item.preview)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 4) {
+                            if item.isFavorite {
+                                Image(systemName: "heart.fill")
+                                    .foregroundColor(.red)
+                                    .font(.caption2)
+                            }
+                            
+                            Text(item.timestamp, style: .relative)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            
+                            Circle()
+                                .fill(item.processingStatusType.color)
+                                .frame(width: 6, height: 6)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                
+                if sourceGroup.items.last?.id != item.id {
+                    Divider()
+                        .padding(.leading, 36)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+}
+
+// MARK: - Inbox Dashboard View (Legacy - keeping for reference)
 struct InboxDashboardView: View {
     @ObservedObject var viewModel: ContentViewModel
     @StateObject private var taskManager = TaskManager()

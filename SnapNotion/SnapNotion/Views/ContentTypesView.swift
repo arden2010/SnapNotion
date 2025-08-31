@@ -10,6 +10,11 @@ import SwiftUI
 struct ContentTypesView: View {
     @State private var selectedType: ContentTypeCategory = .library
     @State private var showingAddSheet = false
+    @State private var showingOptionsMenu = false
+    @StateObject private var clipboardMonitor = ClipboardMonitor()
+    private let contentProcessor = ContentCaptureProcessor.shared
+    @State private var showingProcessing = false
+    @State private var processingMessage = ""
     
     var body: some View {
         ZStack {
@@ -63,23 +68,19 @@ struct ContentTypesView: View {
                 )
             }
             
-            // Floating Action Button (same position as Inbox tab)
+            // Smart Floating Action Button
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
-                    Button(action: {
-                        showingAddSheet = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title2)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
-                    }
-                    .frame(width: 56, height: 56)
-                    .background(Color.phoenixOrange)
-                    .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                    SmartFloatingActionButton(
+                        onPaste: {
+                            handlePasteAction()
+                        },
+                        onLongPress: {
+                            showingOptionsMenu = true
+                        }
+                    )
                     .padding(.trailing, 20)
                     .padding(.bottom, 20)
                 }
@@ -87,6 +88,81 @@ struct ContentTypesView: View {
         }
         .sheet(isPresented: $showingAddSheet) {
             AddContentSheet()
+        }
+        .sheet(isPresented: $showingOptionsMenu) {
+            ContentOptionsMenu()
+        }
+        .overlay {
+            if showingProcessing {
+                ProcessingOverlay(message: processingMessage)
+            }
+        }
+    }
+    
+    // MARK: - Actions
+    private func handlePasteAction() {
+        guard let clipboardContent = clipboardMonitor.getClipboardContent() else {
+            return
+        }
+        
+        Task {
+            await MainActor.run {
+                showingProcessing = true
+                processingMessage = "📋 Processing clipboard content..."
+            }
+            
+            do {
+                let result: ContentItem
+                
+                switch clipboardContent.type {
+                case .text:
+                    if let text = clipboardContent.text {
+                        result = try await contentProcessor.processText(text, source: "Smart FAB")
+                    } else {
+                        throw ContentProcessingError.aiProcessingFailed
+                    }
+                    
+                case .image:
+                    if let imageData = clipboardContent.data {
+                        result = try await contentProcessor.processImage(imageData, source: "Smart FAB")
+                    } else {
+                        throw ContentProcessingError.imageConversionFailed
+                    }
+                    
+                case .web:
+                    if let url = clipboardContent.url {
+                        result = try await contentProcessor.processWebURL(url, source: "Smart FAB")
+                    } else {
+                        throw ContentProcessingError.aiProcessingFailed
+                    }
+                    
+                case .mixed, .pdf:
+                    if let text = clipboardContent.text {
+                        result = try await contentProcessor.processText(text, source: "Smart FAB")
+                    } else {
+                        throw ContentProcessingError.aiProcessingFailed
+                    }
+                }
+                
+                await MainActor.run {
+                    processingMessage = "✅ Content processed successfully!"
+                    
+                    // Brief success message then dismiss
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self.showingProcessing = false
+                    }
+                }
+                
+            } catch {
+                await MainActor.run {
+                    processingMessage = "❌ Failed to process: \(error.localizedDescription)"
+                    
+                    // Show error for a moment then dismiss
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        self.showingProcessing = false
+                    }
+                }
+            }
         }
     }
 }

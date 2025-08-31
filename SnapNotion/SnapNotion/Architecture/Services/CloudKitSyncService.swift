@@ -40,7 +40,7 @@ enum ConflictResolutionStrategy {
 // MARK: - CloudKit Sync Service
 
 @MainActor
-class CloudKitSyncService: ObservableObject, CloudKitSyncServiceProtocol {
+class CloudKitSyncService: ObservableObject, @preconcurrency CloudKitSyncServiceProtocol {
     
     static let shared = CloudKitSyncService()
     
@@ -637,13 +637,4 @@ struct SyncConflict {
     }
 }
 
-// MARK: - Array Extension
-
-extension Array {
-    func chunked(into size: Int) -> [[Element]] {
-        return stride(from: 0, to: count, by: size).map {
-            Array(self[$0..<Swift.min($0 + size, count)])
-        }
-    }
-}
 

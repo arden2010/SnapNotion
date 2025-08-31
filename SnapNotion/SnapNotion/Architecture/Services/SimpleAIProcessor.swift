@@ -7,7 +7,7 @@
 
 import Foundation
 import UIKit
-import Vision
+@preconcurrency import Vision
 
 // MARK: - Simple AI Processor
 class SimpleAIProcessor: AIProcessorProtocol {
@@ -62,12 +62,10 @@ class SimpleAIProcessor: AIProcessorProtocol {
             
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    try handler.perform([request])
-                } catch {
-                    continuation.resume(throwing: error)
-                }
+            do {
+                try handler.perform([request])
+            } catch {
+                continuation.resume(throwing: error)
             }
         }
     }

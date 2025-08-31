@@ -10,7 +10,7 @@ import SwiftUI
 struct QuickCaptureView: View {
     @Environment(\.dismiss) private var dismiss
     let clipboardMonitor: ClipboardMonitor
-    let screenshotDetector: ScreenCaptureDetector
+    let screenshotDetector: ScreenshotDetectionManager
     let onCameraCapture: () -> Void
     let onPhotoLibrary: () -> Void
     let onDocumentScan: () -> Void
@@ -72,7 +72,7 @@ struct QuickCaptureView: View {
                         )
                     }
                     
-                    if screenshotDetector.hasRecentScreenshot {
+                    if screenshotDetector.lastScreenshotImage != nil {
                         CaptureOptionButton(
                             icon: "camera.viewfinder",
                             title: "Recent Screenshot",
@@ -144,7 +144,7 @@ struct CaptureOptionButton: View {
 #Preview {
     QuickCaptureView(
         clipboardMonitor: ClipboardMonitor(),
-        screenshotDetector: ScreenCaptureDetector(),
+        screenshotDetector: ScreenshotDetectionManager.shared,
         onCameraCapture: {},
         onPhotoLibrary: {},
         onDocumentScan: {},

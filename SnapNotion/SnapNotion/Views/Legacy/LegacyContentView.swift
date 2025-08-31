@@ -14,7 +14,7 @@ struct LegacyContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @StateObject private var contentViewModel = ContentViewModel()
     @StateObject private var clipboardMonitor = ClipboardMonitor()
-    @StateObject private var screenshotDetector = ScreenCaptureDetector()
+    @StateObject private var screenshotDetector = ScreenshotDetectionManager.shared
     
     @State private var showingCaptureSheet = false
     @State private var showingCamera = false
@@ -154,7 +154,8 @@ struct LegacyContentView: View {
     
     private func handleRecentScreenshot() {
         Task {
-            if let screenshotData = await screenshotDetector.getLatestScreenshot() {
+            if let screenshot = screenshotDetector.lastScreenshotImage,
+               let screenshotData = screenshot.jpegData(compressionQuality: 0.8) {
                 let sharedContent = SharedContent(
                     type: .image,
                     data: screenshotData,

@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct GraphView: View {
-    @State private var selectedNode: GraphNode?
-    @State private var graphNodes: [GraphNode] = GraphNode.sampleNodes
+    @State private var selectedNode: GraphViewNode?
+    @State private var graphNodes: [GraphViewNode] = GraphViewNode.sampleNodes
     @State private var showingSearch = false
     
     var body: some View {
@@ -59,7 +59,7 @@ struct GraphView: View {
     }
 }
 
-struct GraphNode: Identifiable {
+struct GraphViewNode: Identifiable {
     let id = UUID()
     let title: String
     let type: NodeType
@@ -92,17 +92,17 @@ struct GraphNode: Identifiable {
         }
     }
     
-    static let sampleNodes: [GraphNode] = [
-        GraphNode(title: "AI Research", type: .content, connections: [], position: CGPoint(x: 100, y: 100), weight: 0.8),
-        GraphNode(title: "Machine Learning", type: .tag, connections: [], position: CGPoint(x: 200, y: 150), weight: 0.6),
-        GraphNode(title: "Review Papers", type: .task, connections: [], position: CGPoint(x: 150, y: 200), weight: 0.4),
-        GraphNode(title: "Deep Learning", type: .content, connections: [], position: CGPoint(x: 250, y: 100), weight: 0.7)
+    static let sampleNodes: [GraphViewNode] = [
+        GraphViewNode(title: "AI Research", type: .content, connections: [], position: CGPoint(x: 100, y: 100), weight: 0.8),
+        GraphViewNode(title: "Machine Learning", type: .tag, connections: [], position: CGPoint(x: 200, y: 150), weight: 0.6),
+        GraphViewNode(title: "Review Papers", type: .task, connections: [], position: CGPoint(x: 150, y: 200), weight: 0.4),
+        GraphViewNode(title: "Deep Learning", type: .content, connections: [], position: CGPoint(x: 250, y: 100), weight: 0.7)
     ]
 }
 
 struct GraphCanvasView: View {
-    let nodes: [GraphNode]
-    @Binding var selectedNode: GraphNode?
+    let nodes: [GraphViewNode]
+    @Binding var selectedNode: GraphViewNode?
     
     var body: some View {
         GeometryReader { geometry in
@@ -131,7 +131,7 @@ struct GraphCanvasView: View {
 }
 
 struct NodeView: View {
-    let node: GraphNode
+    let node: GraphViewNode
     let isSelected: Bool
     
     var body: some View {
@@ -164,7 +164,7 @@ struct NodeView: View {
 }
 
 struct NodeDetailView: View {
-    let node: GraphNode
+    let node: GraphViewNode
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -221,8 +221,8 @@ struct GraphEmptyState: View {
 }
 
 struct GraphSearchView: View {
-    let nodes: [GraphNode]
-    let onSelectNode: (GraphNode) -> Void
+    let nodes: [GraphViewNode]
+    let onSelectNode: (GraphViewNode) -> Void
     @State private var searchText = ""
     
     var body: some View {
@@ -245,7 +245,7 @@ struct GraphSearchView: View {
         }
     }
     
-    private var filteredNodes: [GraphNode] {
+    private var filteredNodes: [GraphViewNode] {
         if searchText.isEmpty {
             return nodes
         } else {

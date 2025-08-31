@@ -10,7 +10,7 @@ import SwiftUI
 // MARK: - Smart Suggestions View
 struct SmartSuggestionsView: View {
     @ObservedObject var clipboardMonitor: ClipboardMonitor
-    @ObservedObject var screenshotDetector: ScreenCaptureDetector
+    @ObservedObject var screenshotDetector: ScreenshotDetectionManager
     
     let onClipboardPaste: () -> Void
     let onScreenshotCapture: () -> Void
@@ -24,7 +24,7 @@ struct SmartSuggestionsView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     // Recent screenshot suggestion
-                    if screenshotDetector.hasRecentScreenshot {
+                    if screenshotDetector.lastScreenshotImage != nil {
                         SmartSuggestionCard(
                             icon: "camera.viewfinder",
                             title: "最近截图",
@@ -36,44 +36,6 @@ struct SmartSuggestionsView: View {
                         }
                     }
                     
-                    // Clipboard image suggestion
-                    if clipboardMonitor.hasImageContent {
-                        SmartSuggestionCard(
-                            icon: "photo.on.rectangle.angled",
-                            title: "剪贴板图片",
-                            subtitle: "处理复制的图片",
-                            color: .purple,
-                            badge: nil
-                        ) {
-                            onClipboardPaste()
-                        }
-                    }
-                    
-                    // Clipboard text suggestion
-                    if clipboardMonitor.hasTextContent {
-                        SmartSuggestionCard(
-                            icon: "doc.plaintext",
-                            title: "剪贴板文本",
-                            subtitle: "处理复制的文本",
-                            color: .green,
-                            badge: nil
-                        ) {
-                            onClipboardPaste()
-                        }
-                    }
-                    
-                    // Clipboard URL suggestion
-                    if clipboardMonitor.hasURLContent {
-                        SmartSuggestionCard(
-                            icon: "link",
-                            title: "剪贴板链接",
-                            subtitle: "处理复制的网址",
-                            color: .orange,
-                            badge: nil
-                        ) {
-                            onClipboardPaste()
-                        }
-                    }
                 }
                 .padding(.horizontal)
             }
@@ -146,7 +108,7 @@ struct SmartSuggestionCard: View {
 #Preview {
     SmartSuggestionsView(
         clipboardMonitor: ClipboardMonitor(),
-        screenshotDetector: ScreenCaptureDetector(),
+        screenshotDetector: ScreenshotDetectionManager.shared,
         onClipboardPaste: { },
         onScreenshotCapture: { }
     )

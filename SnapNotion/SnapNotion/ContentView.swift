@@ -11,6 +11,8 @@ import UIKit
 import Combine
 
 struct ContentView: View {
+    @StateObject private var screenshotManager = ScreenshotDetectionManager.shared
+    
     var body: some View {
         TabView {
             // Tab 1: All content (inbox style)
@@ -33,6 +35,14 @@ struct ContentView: View {
                     Image(systemName: "brain.head.profile")
                     Text("Insights")
                 }
+        }
+        .screenshotProcessingBanner(
+            isShowing: $screenshotManager.showProcessingBanner,
+            message: screenshotManager.processingMessage
+        )
+        .onAppear {
+            // Screenshot detection starts automatically when the manager initializes
+            print("📸 SnapNotion app launched - screenshot monitoring active")
         }
     }
 }
