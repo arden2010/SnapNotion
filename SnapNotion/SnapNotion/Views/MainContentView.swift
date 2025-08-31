@@ -442,7 +442,7 @@ struct InboxContentView: View {
                             .foregroundColor(.orange)
                             .font(.title3)
                         
-                        Text("Tasks")
+                        Text("What's Next")
                             .font(.headline)
                             .fontWeight(.semibold)
                         
@@ -486,7 +486,7 @@ struct InboxContentView: View {
                             .foregroundColor(.blue)
                             .font(.title3)
                         
-                        Text("Content by Source")
+                        Text("Latest Captured")
                             .font(.headline)
                             .fontWeight(.semibold)
                         
