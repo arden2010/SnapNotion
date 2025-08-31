@@ -56,53 +56,114 @@ SnapNotion 是一款基于第一性原理设计的本地优先智能内容管理
 
 ## 🎨 Core UI/UX Architecture / 核心UI/UX架构
 
-### Three-Panel Navigation System / 三面板导航系统
+### Optimized 3-Tab Navigation System / 优化的三Tab导航系统
 
+#### Main Navigation Structure / 主导航结构
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Left Panel     │    Main Panel    │   Right Panel     │
-│  (Settings)     │   (Core App)     │  (Advanced)       │
-│                 │                  │                   │
-│  ├─ Profile     │  ┌─────────────┐ │  ├─ Knowledge     │
-│  ├─ Sync        │  │ Dashboard   │ │  │   Graph        │
-│  ├─ AI Config   │  │ Library     │ │  ├─ AI Tools     │
-│  ├─ Export      │  │ Favorites   │ │  ├─ Analytics    │
-│  └─ About       │  │ Tasks       │ │  └─ Plugins      │
-│                 │  │ Graph       │ │                   │
-│                 │  └─────────────┘ │                   │
+│                   Top Navigation                        │
+│  [📥 Inbox]     [📁 Organize]     [🧠 Insights]        │
+└─────────────────────────────────────────────────────────┘
+│                                                         │
+│                 Content Area                            │
+│                                                         │
+│                                               [+] FAB   │ ← Floating Action Button
+├─────────────────────────────────────────────────────────┤
+│    [Library] [Favorites] [Tasks]          (Organize)    │ ← Sub-navigation (Organize only)
 └─────────────────────────────────────────────────────────┘
 ```
 
 #### Phoenix Branding / 凤凰品牌设计
 - **品牌图标**: 橙色凤凰图标 (120px, h-30 w-30)
-- **主色调**: Phoenix Orange #FF9933
+- **主色调**: Phoenix Orange #FF9933 - Applied to active states and FAB
 - **设计理念**: 象征智能转换与知识重生
 
-### Five-Tab Navigation System / 五Tab导航系统
+### Enhanced Three-Tab System / 增强的三Tab系统
 
-1. **Dashboard**: 仪表板图标 + 蓝色分析背景
-2. **Library**: 书本图标 + 绿色图书背景  
-3. **Favorites**: 心形图标 + 红色/粉色收藏背景 (New Tab)
-4. **Tasks**: 清单图标 + 橙色任务背景
-5. **Graph**: 网络图标 + 紫色关系背景
+#### **Tab 1: 📥 Inbox** (Gmail-style Content Hub)
+- **Purpose**: Gmail-style inbox for all captured content
+- **Icon**: `tray.fill` / `tray` (active/inactive)
+- **Features**: 
+  - All content types mixed together chronologically
+  - Floating Action Button (FAB) for content capture
+  - Gmail-style list interface with swipe actions
+- **Color Theme**: Clean, neutral with Phoenix Orange accents
 
-### Gesture Interaction Design / 手势交互设计
+#### **Tab 2: 📁 Organize** (Content Organization Hub)
+- **Purpose**: Organized content by categories with sub-navigation
+- **Icon**: `folder.fill` / `folder` (active/inactive)
+- **Features**:
+  - **Compact Sub-tabs**: Library, Favorites, Tasks (grouped on left)
+  - **12px spacing** between sub-tabs for optimal touch targets
+  - **Consistent FAB** positioning (bottom-right, same as Inbox)
+  - **No overlap** between sub-tabs and FAB
+- **Sub-Navigation**:
+  - **📚 Library**: `books.vertical.fill` / `books.vertical`
+  - **❤️ Favorites**: `heart.fill` / `heart` 
+  - **✅ Tasks**: `checkmark.circle.fill` / `checkmark.circle`
 
-#### Panel Switching / 面板切换
-- **水平滑动**: 左中右面板无缝切换
-- **触发方式**: 边缘滑动 + 汉堡菜单按钮
+#### **Tab 3: 🧠 Insights** (Knowledge Connections)
+- **Purpose**: Knowledge graph visualization and AI insights
+- **Icon**: `brain.head.profile` (static icon)
+- **Features**:
+  - Interactive knowledge graph with node exploration
+  - Graph controls (layout, connection strength, node size)
+  - Node detail overlays with connection information
+- **Color Theme**: Purple network visualization theme
+
+### Consistent Floating Action Button (FAB) / 一致的悬浮操作按钮
+
+#### FAB Design Specifications / FAB设计规范
+- **Size**: 56×56px circular button
+- **Position**: Bottom-right corner (20px margin from edges)
+- **Color**: Phoenix Orange #FF9933 background with white icon
+- **Icon**: `plus` SF Symbol (title2 font size, medium weight)
+- **Shadow**: `black.opacity(0.3)`, radius: 4px, offset: (0, 2)
+- **Consistency**: Same position and styling across all main tabs
+
+#### FAB Content Capture Options / FAB内容捕获选项
+When tapped, FAB opens `AddContentSheet` with 6 capture methods:
+1. **📸 Camera**: Take photo or scan document (`camera` icon, blue theme)
+2. **📷 Photo Library**: Choose from photos (`photo` icon, green theme)  
+3. **📝 Text Note**: Create new text note (`doc.text` icon, orange theme)
+4. **🔗 Web Link**: Save website or URL (`link` icon, purple theme)
+5. **📋 From Clipboard**: Paste clipboard content (`doc.on.clipboard` icon, red theme)
+6. **📁 Import File**: Import PDF, document, image (`square.and.arrow.down` icon, indigo theme)
+
+### Enhanced Interaction Design / 增强的交互设计
+
+#### Tab Navigation / Tab导航
+- **Primary Tabs**: Native iOS TabView with bottom tab bar
+- **Sub-tabs (Organize)**: Custom compact HStack with 12px spacing
+- **Active States**: Phoenix Orange color for selected tabs
+- **Touch Targets**: Minimum 44×44pt for accessibility
 
 #### Content Item Operations / 内容项目操作
 - **👉 Right Swipe**: 快速收藏/取消收藏 (红色心形反馈)
 - **👈 Left Swipe**: 显示编辑+更多按钮 (蓝色Edit + 紫色More)
+- **Tap Gesture**: Navigate to content detail view
+- **Long Press**: Context menu with quick actions
 
 #### Responsive Design / 响应式设计
-```javascript
-// 设备适配断点
-breakpoints: {
-  iPhone: "< 768px",      // 单列布局，底部Tab
-  iPad: "768px - 1199px", // 保留遮盖层交互  
-  Mac: ">= 1200px"        // 无遮盖层，桌面级体验
+```swift
+// SwiftUI Responsive Breakpoints
+@Environment(\.horizontalSizeClass) var horizontalSizeClass
+@Environment(\.verticalSizeClass) var verticalSizeClass
+
+// Layout Adaptations
+iPhone: {
+  .compact width + .regular height
+  // Single-column layout, bottom tabs, optimized FAB positioning
+}
+
+iPad: {
+  .regular width + .regular height  
+  // Enhanced spacing, larger touch targets, split-view ready
+}
+
+Mac: {
+  .regular width + .compact height (via Catalyst)
+  // Desktop-optimized controls, keyboard shortcuts, menu bar
 }
 ```
 
@@ -222,30 +283,49 @@ CREATE VIRTUAL TABLE content_fts USING fts5(
 
 ## 📋 Feature Development Roadmap / 功能开发路线图
 
-### Phase 1: Foundation & Essential Capture (Q1-Q2 2025)
-**Focus**: 基础架构与核心捕获
+### ✅ Current Implementation Status (2025-08-31) / 当前实现状态
+
+#### **Phase 1: Foundation & UI Architecture - COMPLETED** ✅
+**Focus**: Core navigation and interface architecture
+
+#### ✅ **Completed Features:**
+- [x] ✅ **Optimized 3-Tab Navigation System**: Inbox, Organize, Insights
+- [x] ✅ **Consistent FAB Design**: 56×56px floating action button across all tabs
+- [x] ✅ **Gmail-style Content Interface**: Clean list views with swipe actions
+- [x] ✅ **Compact Sub-navigation**: Library/Favorites/Tasks with 12px spacing
+- [x] ✅ **AddContentSheet Modal**: 6 content capture methods with themed icons
+- [x] ✅ **Knowledge Graph Visualization**: Interactive nodes with controls
+- [x] ✅ **Phoenix Orange Branding**: Consistent color theme throughout
+- [x] ✅ **SwiftUI Architecture**: Modern iOS/macOS compatible codebase
+- [x] ✅ **Build System Integration**: Xcode project with successful compilation
+
+#### 🎯 **Key Architecture Decisions Made:**
+- **Navigation Simplification**: From 5-tab to 3-tab system for better UX
+- **FAB Consistency**: Same position/styling across tabs (not tab-integrated)
+- **Content Organization**: Hierarchical structure (main → sub-navigation)
+- **Design Language**: Gmail-inspired simplicity with Phoenix Orange accents
+
+### Phase 2: Content Processing & AI Integration (Q4 2025)
+**Focus**: Content capture, processing, and intelligent organization
 
 #### Key Deliverables:
-- [x] 🎯 项目架构设计与基础框架搭建
-- [ ] 🎯 Three-panel swipe interface with gesture support
-- [ ] 🎯 Multi-format content capture and processing
-- [ ] 🎯 AI-powered organization and classification
-- [ ] 🎯 Local-first storage with basic sync
+- [ ] 🎯 Multi-format content capture implementation
+- [ ] 🎯 OCR图像文字识别
+- [ ] 🎯 AI内容分析与自动标签
 - [ ] 🎯 剪贴板智能监听与内容捕获
 - [ ] 🎯 AI任务自动生成与优先级判断
 - [ ] 🎯 本地存储与搜索基础
-- [ ] 🎯 多平台UI基础架构
+- [ ] 🎯 Core Data integration with CloudKit sync
 
-#### P0 Features (Must-Have for MVP):
-- Content capture and processing system
-- AI-powered organization engine  
-- Three-panel navigation interface
-- Local storage and basic sync
-- Intelligent search capabilities
-- Basic task generation from content
+#### P0 Features (Must-Have for V1.0):
+- Functional content capture system
+- Basic AI-powered organization
+- Local storage with cloud backup
+- Search and retrieval capabilities
+- Task generation from captured content
 
-### Phase 2: Knowledge Intelligence (Q3 2025)
-**Focus**: 智能处理与组织
+### Phase 3: Knowledge Intelligence (Q1 2026)
+**Focus**: Advanced AI and knowledge management
 
 #### Key Deliverables:
 - [ ] 🎯 OCR图像文字识别
@@ -550,6 +630,389 @@ class LocalizationManager: ObservableObject {
 "settings.language.selection"       // Language selection setting
 "error.network.connection"         // Network connection error
 ```
+
+---
+
+## 🏗️ Current Implementation Architecture / 当前实现架构
+
+### ✅ **Implemented Components** / 已实现组件
+
+#### **UI Layer - SwiftUI Views** / UI层 - SwiftUI视图
+```swift
+// Main Navigation Structure
+ContentView.swift                    // ✅ 3-tab TabView container
+├── MainContentView.swift            // ✅ Tab 1: Inbox (Gmail-style)
+├── ContentTypesView.swift           // ✅ Tab 2: Organize + Sub-tabs
+│   ├── LibraryContentView           // ✅ Library sub-tab
+│   ├── FavoritesContentView         // ✅ Favorites sub-tab  
+│   └── TasksContentView             // ✅ Tasks sub-tab
+└── KnowledgeGraphView.swift         // ✅ Tab 3: Insights (Graph viz)
+
+// Shared Components
+AddContentSheet.swift                // ✅ FAB modal (6 capture options)
+ContentRowView.swift                 // ✅ Content list item with swipe actions
+TaskRowView.swift                    // ✅ Task item with completion toggle
+```
+
+#### **Data Models & ViewModels** / 数据模型和视图模型
+```swift
+// Core Models
+ContentItem.swift                    // ✅ Content data model
+SimpleTaskItem.swift                 // ✅ Task data model  
+GraphNode.swift                      // ✅ Knowledge graph node model
+
+// ViewModels
+ContentViewModel.swift               // ✅ Content management logic
+TaskManager.swift                    // ✅ Task CRUD operations
+GraphManager.swift                   // ✅ Graph visualization logic
+```
+
+#### **Design System Implementation** / 设计系统实现
+```swift
+// Color Extensions
+extension Color {
+    static let phoenixOrange = Color(red: 1.0, green: 0.6, blue: 0.2)  // #FF9933
+}
+
+// FAB Specifications (Consistent across all tabs)
+.frame(width: 56, height: 56)
+.background(Color.phoenixOrange)
+.clipShape(Circle())
+.shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+.padding(.trailing, 20)
+.padding(.bottom, 20)
+
+// Tab Spacing (Organize sub-tabs)
+HStack(spacing: 12) { /* Compact 12px spacing */ }
+```
+
+#### **Build & Integration Status** / 构建和集成状态
+- ✅ **Xcode Project**: Successfully compiles with zero errors
+- ✅ **SwiftUI Compatibility**: iOS 16+, macOS 13+ ready
+- ✅ **Git Integration**: All changes committed and pushed to GitHub
+- ⚠️ **Minor Warnings**: Swift 6 concurrency warnings (non-blocking)
+
+### 🚧 **Next Development Priorities** / 下一步开发重点
+1. **Content Capture Implementation**: Make FAB capture methods functional
+2. **Core Data Integration**: Replace mock data with persistent storage
+3. **AI Processing Pipeline**: Implement content analysis and task generation
+4. **CloudKit Sync**: Add cross-device synchronization
+
+---
+
+## 🔄 Multi-App Ecosystem Architecture / 多应用生态架构
+
+### Strategic Vision / 战略愿景
+
+SnapNotion 将作为**中央知识枢纽**，为围绕其构建的专业化应用程序提供数据和智能服务，形成强大的生产力工具生态系统。
+
+**SnapNotion as Central Knowledge Hub** - serving specialized productivity apps with data and intelligence services to create a powerful ecosystem of interconnected tools.
+
+#### Ecosystem Architecture / 生态系统架构
+```
+┌─────────────────────────────────────────────────────────┐
+│                    SnapNotion Core                      │
+│              (Central Knowledge Hub)                    │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐   │
+│  │Content  │  │AI       │  │Knowledge│  │Task     │   │
+│  │Storage  │  │Engine   │  │Graph    │  │Engine   │   │
+│  └─────────┘  └─────────┘  └─────────┘  └─────────┘   │
+│                                                       │
+│           Universal Export API & Hook System           │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐   │
+│  │Export   │  │Webhook  │  │Real-time│  │Security │   │
+│  │Engine   │  │System   │  │Sync     │  │Gateway  │   │
+│  └─────────┘  └─────────┘  └─────────┘  └─────────┘   │
+└─────────────────────┬───────────────────────────────────┘
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+        ▼            ▼            ▼
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│TaskMaster   │ │WriteFlow    │ │InsightDash  │
+│(Task Mgmt)  │ │(Writing)    │ │(Analytics)  │
+│             │ │             │ │             │
+│• GTD Flows  │ │• AI Writing │ │• Productivity│
+│• Time Track │ │• Publishing │ │• Insights   │
+│• Collab     │ │• Research   │ │• Reports    │
+└─────────────┘ └─────────────┘ └─────────────┘
+
+        ┌────────────┼────────────┐
+        │            │            │
+        ▼            ▼            ▼
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│StudyMate    │ │BusinessHub  │ │CreativeKit  │
+│(Learning)   │ │(Enterprise) │ │(Design)     │
+│             │ │             │ │             │
+│• Note-taking│ │• Team Collab│ │• Mood Board │
+│• Flashcards │ │• Compliance │ │• Asset Mgmt │
+│• Progress   │ │• Reporting  │ │• Inspiration│
+└─────────────┘ └─────────────┘ └─────────────┘
+```
+
+### Universal Data Export Infrastructure / 通用数据导出基础设施
+
+#### Core Export Architecture / 核心导出架构
+```swift
+// Primary Export Protocol
+protocol SnapNotionDataExporter {
+    // Content Export
+    func exportContent(filter: ContentFilter) async -> ExportedData
+    func exportContentStream(filter: ContentFilter) -> AsyncStream<ContentNode>
+    
+    // Knowledge Graph Export  
+    func exportKnowledgeGraph(scope: GraphScope) async -> GraphExport
+    func exportSemanticRelations(nodeIds: [UUID]) async -> [SemanticRelation]
+    
+    // Task & Workflow Export
+    func exportTasks(filter: TaskFilter) async -> TaskExport
+    func exportTaskTemplates() async -> [TaskTemplate]
+    
+    // AI & Analytics Export
+    func exportAIInsights(contentIds: [UUID]) async -> AIInsightsExport
+    func exportUsageAnalytics(timeRange: DateInterval) async -> AnalyticsExport
+    
+    // Real-time Subscriptions
+    func subscribeToChanges(scope: SubscriptionScope) -> AsyncStream<DataUpdate>
+    func createWebhook(endpoint: URL, events: [EventType]) async -> WebhookHandle
+}
+
+// Universal Data Schema
+struct UniversalContentNode: Codable, Sendable {
+    let id: UUID
+    let title: String
+    let content: String
+    let contentType: UniversalContentType
+    let tags: [String]
+    let aiMetadata: AIMetadata?
+    let relationships: [UniversalRelation]
+    
+    // Temporal data
+    let createdAt: ISO8601Date
+    let modifiedAt: ISO8601Date
+    let accessedAt: ISO8601Date?
+    
+    // Source tracking
+    let sourceApp: String = "SnapNotion"
+    let schemaVersion: String = "1.0"
+    let exportedAt: ISO8601Date
+    let syncToken: String
+    
+    // Cross-platform compatibility
+    let platformMetadata: [String: AnyCodable]
+}
+
+// Hook System for Extensions
+protocol ContentProcessingHook: Sendable {
+    func willExportContent(_ content: ContentNode) async -> ContentNode?
+    func didExportContent(_ exported: UniversalContentNode) async -> UniversalContentNode
+    func canExportToApp(_ appId: String) async -> Bool
+}
+```
+
+#### Multi-Format Export Support / 多格式导出支持
+```swift
+// Export Format Registry
+enum ExportFormat: String, CaseIterable {
+    case universalJSON = "universal-json"      // Default structured format
+    case markdown = "markdown"                 // Human-readable format
+    case taskPaper = "taskpaper"              // Plain text task format
+    case mindMap = "freemind"                 // XML mind map format
+    case csv = "csv"                          // Tabular data format
+    case rdf = "rdf-xml"                      // Semantic web format
+    case opml = "opml"                        // Outline format
+    
+    var mimeType: String {
+        switch self {
+        case .universalJSON: return "application/vnd.snapnotion+json"
+        case .markdown: return "text/markdown"
+        case .csv: return "text/csv"
+        // ... other cases
+        }
+    }
+}
+
+// Format Transformation Pipeline
+class ExportTransformer {
+    func transform<T: Exportable>(_ data: T, to format: ExportFormat) async throws -> Data
+    func registerCustomFormat(_ format: CustomExportFormat)
+    func validateExportedData(_ data: Data, format: ExportFormat) async -> ValidationResult
+}
+```
+
+### Cross-App Communication Protocols / 跨应用通信协议
+
+#### URL Scheme & Deep Linking / URL方案和深度链接
+```swift
+// SnapNotion URL Schemes
+enum SnapNotionURL {
+    case exportContent(filter: String, format: ExportFormat)
+    case shareKnowledgeGraph(nodeId: UUID, depth: Int)
+    case requestTaskSync(appId: String, lastSync: Date?)
+    case executeQuery(query: String, format: ExportFormat)
+    case subscribeUpdates(webhook: URL, events: [EventType])
+    
+    var url: URL {
+        switch self {
+        case .exportContent(let filter, let format):
+            return URL(string: "snapnotion://api/export/content?filter=\(filter)&format=\(format.rawValue)")!
+        case .shareKnowledgeGraph(let nodeId, let depth):
+            return URL(string: "snapnotion://api/graph/share/\(nodeId)?depth=\(depth)")!
+        // ... other implementations
+        }
+    }
+}
+
+// Bidirectional App Communication
+protocol CrossAppCommunicator {
+    func sendDataToApp(_ appId: String, data: ExportedData) async throws
+    func receiveDataFromApp(_ appId: String) async throws -> ImportedData
+    func establishSyncChannel(with appId: String) async throws -> SyncChannel
+}
+```
+
+#### Shared Data Container / 共享数据容器
+```swift
+// Secure Inter-App Data Sharing
+class SharedDataManager {
+    private let containerURL = FileManager.default
+        .containerURL(forSecurityApplicationGroupIdentifier: "group.snapnotion.ecosystem")
+    
+    // High-performance data sharing
+    func writeSharedData<T: Codable>(_ data: T, to path: String, 
+                                   compression: CompressionType = .lz4) async throws
+    func readSharedData<T: Codable>(_ type: T.Type, from path: String) async throws -> T
+    
+    // Real-time change observation
+    func observeChanges(at path: String) -> AsyncStream<FileSystemEvent>
+    func createSyncedDatabase(name: String) async throws -> SharedDatabase
+    
+    // Security & Permissions
+    func grantAccess(to appId: String, for resource: String, 
+                    level: AccessLevel, expiry: Date?) async throws
+    func revokeAccess(from appId: String, for resource: String) async throws
+}
+```
+
+### Strategic Development Roadmap / 战略开发路线图
+
+#### **Phase 2: Export Infrastructure (Q4 2025)** / 第二阶段：导出基础设施
+**Focus**: Building the foundation for multi-app ecosystem
+
+##### Key Deliverables:
+- [ ] 🎯 **Universal Data Schema**: Cross-platform compatible format design
+- [ ] 🎯 **Basic Export API**: JSON/Markdown export with filtering
+- [ ] 🎯 **App Groups Setup**: Secure inter-app data sharing container
+- [ ] 🎯 **URL Scheme Handlers**: Deep linking and app-to-app communication
+- [ ] 🎯 **Export Hook System**: Extensible content processing hooks
+- [ ] 🎯 **Format Transformation**: Multi-format export pipeline
+- [ ] 🎯 **Security Framework**: Access control and permission system
+
+##### P0 Features (Must-Have for Export MVP):
+- Universal content export (JSON format)
+- Basic task synchronization
+- Secure app group data sharing
+- URL scheme communication
+- Export permission controls
+
+#### **Phase 3: Real-time Ecosystem (Q1 2026)** / 第三阶段：实时生态系统
+**Focus**: Advanced integration and real-time synchronization
+
+##### Key Deliverables:
+- [ ] 🎯 **Real-time Sync Engine**: Live data updates between apps
+- [ ] 🎯 **Webhook System**: Event-driven notifications for external apps
+- [ ] 🎯 **SDK Development**: Third-party integration libraries (iOS/macOS)
+- [ ] 🎯 **GraphQL API**: Flexible query interface for external apps
+- [ ] 🎯 **Change Tracking**: Efficient incremental sync and conflict resolution
+- [ ] 🎯 **Performance Optimization**: Caching and data streaming
+- [ ] 🎯 **Developer Tools**: API testing and debugging utilities
+
+##### P1 Features (Should-Have for Advanced Integration):
+- Real-time knowledge graph updates
+- Advanced query capabilities (GraphQL)
+- Batch data operations
+- Custom webhook event types
+- API rate limiting and quotas
+
+#### **Phase 4: Platform Ecosystem (Q2 2026)** / 第四阶段：平台生态系统
+**Focus**: Full ecosystem platform with marketplace and governance
+
+##### Key Deliverables:
+- [ ] 🎯 **Developer Portal**: Documentation, SDKs, and API reference
+- [ ] 🎯 **App Marketplace**: Discovery and distribution platform
+- [ ] 🎯 **Revenue Sharing**: Monetization framework for ecosystem apps
+- [ ] 🎯 **Enterprise Features**: Advanced security, compliance, audit logs
+- [ ] 🎯 **Analytics Platform**: Usage insights and performance monitoring
+- [ ] 🎯 **Governance System**: API versioning, deprecation, migration tools
+- [ ] 🎯 **Community Support**: Forums, tutorials, best practices
+
+##### Enterprise Features (Large-scale Deployment):
+- Multi-tenant data isolation
+- Advanced audit and compliance reporting
+- Custom deployment and white-labeling
+- Enterprise SSO integration
+- Advanced analytics and reporting
+
+### Ecosystem App Concepts / 生态应用概念
+
+#### **TaskMaster** - Advanced Task Management
+```swift
+// Specialized GTD implementation using SnapNotion data
+Features:
+- Import AI-generated tasks from SnapNotion content analysis
+- Advanced project management with knowledge graph integration
+- Time tracking with automatic context switching
+- Team collaboration with shared knowledge base
+- Custom workflow automation based on content triggers
+```
+
+#### **WriteFlow** - AI-Powered Writing Assistant
+```swift
+// Intelligent writing app leveraging SnapNotion's knowledge base
+Features:
+- Research assistant using SnapNotion's content database
+- AI outline generation from knowledge graph relationships
+- Automatic citation and source tracking
+- Multi-format publishing (blog, academic, social media)
+- Real-time fact-checking against knowledge base
+```
+
+#### **InsightDash** - Productivity Analytics
+```swift
+// Personal productivity intelligence platform
+Features:
+- Cross-app productivity metrics and insights
+- Habit formation tracking based on content patterns
+- AI-powered productivity recommendations
+- Goal tracking with knowledge-based milestone suggestions
+- Team productivity benchmarking and optimization
+```
+
+#### **StudyMate** - Learning Management System
+```swift
+// Education-focused app using SnapNotion's AI capabilities
+Features:
+- Automatic flashcard generation from captured content
+- Spaced repetition system with knowledge graph optimization
+- Study session planning based on content relationships
+- Progress tracking with adaptive learning algorithms
+- Collaborative study groups with shared knowledge bases
+```
+
+### Business Model & Revenue Streams / 商业模式和收入流
+
+#### **Platform Revenue Model**
+1. **API Usage Fees**: Tiered pricing based on data export volume
+2. **Premium Integrations**: Advanced features for ecosystem apps
+3. **Enterprise Licensing**: Custom deployments and white-labeling
+4. **Marketplace Commission**: Revenue sharing from ecosystem app sales
+5. **Professional Services**: Custom integration and development services
+
+#### **Ecosystem Growth Strategy**
+- **Developer Incentives**: Revenue sharing and technical support
+- **Strategic Partnerships**: Integration with major productivity platforms
+- **Open Source Components**: Community-driven development
+- **Academic Program**: Research partnerships and educational use cases
 
 ---
 
