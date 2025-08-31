@@ -23,9 +23,9 @@ struct ContentItem: Identifiable {
     let isFavorite: Bool
     let timestamp: Date
     let attachments: [AttachmentPreview]
-    let processingStatus: ProcessingStatus
+    let processingStatus: String
     
-    init(id: UUID = UUID(), title: String, preview: String, source: String, sourceApp: AppSource = .other, type: ContentType, isFavorite: Bool = false, timestamp: Date = Date(), attachments: [AttachmentPreview] = [], processingStatus: ProcessingStatus = .completed) {
+    init(id: UUID = UUID(), title: String, preview: String, source: String, sourceApp: AppSource = .other, type: ContentType, isFavorite: Bool = false, timestamp: Date = Date(), attachments: [AttachmentPreview] = [], processingStatus: String = "completed") {
         self.id = id
         self.title = title
         self.preview = preview
@@ -39,9 +39,13 @@ struct ContentItem: Identifiable {
     }
 }
 
-// ProcessingStatus is defined in ContentProcessingPipeline.swift - removed duplicate definition
-// UI extensions for ProcessingStatus
-extension ProcessingStatus {
+// MARK: - Processing Status Helpers
+enum ProcessingStatusType: String, CaseIterable {
+    case pending = "pending"
+    case processing = "processing"
+    case completed = "completed"
+    case failed = "failed"
+    
     var icon: String {
         switch self {
         case .pending: return "clock"
@@ -58,6 +62,13 @@ extension ProcessingStatus {
         case .completed: return .green
         case .failed: return .red
         }
+    }
+}
+
+// Extension for ContentItem to work with ProcessingStatus
+extension ContentItem {
+    var processingStatusType: ProcessingStatusType {
+        return ProcessingStatusType(rawValue: processingStatus) ?? .completed
     }
 }
 
@@ -295,22 +306,124 @@ protocol AIProcessorProtocol {
 extension ContentItem {
     static var sampleData: [ContentItem] {
         [
+            // Recent captures - varied sources and types
             ContentItem(
-                title: "Welcome to SnapNotion",
-                preview: "Your intelligent content management system is ready to capture and organize your digital life.",
-                source: "System",
-                sourceApp: .other,
-                type: .text,
-                isFavorite: true
+                title: "SwiftUI Grid Layout Best Practices",
+                preview: "Learn how to create responsive grid layouts using LazyVGrid and GridItem. Perfect for photo galleries and card-based interfaces.",
+                source: "developer.apple.com",
+                sourceApp: .safari,
+                type: .web,
+                isFavorite: true,
+                timestamp: Date().addingTimeInterval(-900) // 15 mins ago
             ),
             ContentItem(
-                title: "Getting Started", 
-                preview: "Tap the + button to capture content from any app. Use the camera, import photos, or paste from clipboard.",
-                source: "System",
-                sourceApp: .other,
+                title: "Meeting Notes - Q4 Planning",
+                preview: "Discussed product roadmap, feature prioritization, and resource allocation. Key decisions: focus on mobile-first approach, implement dark mode, launch beta in December.",
+                source: "Notes App",
+                sourceApp: .clipboard,
                 type: .text,
                 isFavorite: false,
-                timestamp: Date().addingTimeInterval(-3600)
+                timestamp: Date().addingTimeInterval(-3600) // 1 hour ago
+            ),
+            ContentItem(
+                title: "Project Timeline Screenshot",
+                preview: "Gantt chart showing development milestones and dependencies for the mobile app release.",
+                source: "Camera Roll",
+                sourceApp: .photos,
+                type: .image,
+                isFavorite: false,
+                timestamp: Date().addingTimeInterval(-5400) // 1.5 hours ago
+            ),
+            ContentItem(
+                title: "AI Product Management Guide",
+                preview: "Comprehensive guide on using AI tools for product management. Covers user research, feature prioritization, and data-driven decisions.",
+                source: "producthunt.com",
+                sourceApp: .safari,
+                type: .web,
+                isFavorite: true,
+                timestamp: Date().addingTimeInterval(-7200) // 2 hours ago
+            ),
+            ContentItem(
+                title: "Code Review Comments",
+                preview: "Feedback on the new authentication module: Consider using async/await for better error handling, add unit tests for edge cases.",
+                source: "WhatsApp",
+                sourceApp: .whatsapp,
+                type: .text,
+                isFavorite: false,
+                timestamp: Date().addingTimeInterval(-10800) // 3 hours ago
+            ),
+            ContentItem(
+                title: "UI Design Inspiration",
+                preview: "Beautiful card-based dashboard design with subtle shadows and smooth transitions. Great reference for our new interface.",
+                source: "Instagram",
+                sourceApp: .instagram,
+                type: .image,
+                isFavorite: true,
+                timestamp: Date().addingTimeInterval(-14400) // 4 hours ago
+            ),
+            ContentItem(
+                title: "Market Research Report",
+                preview: "Analysis of competitor features, pricing models, and user feedback. Key insights: users want better search, offline mode is crucial.",
+                source: "Documents",
+                sourceApp: .camera,
+                type: .pdf,
+                isFavorite: false,
+                timestamp: Date().addingTimeInterval(-18000) // 5 hours ago
+            ),
+            ContentItem(
+                title: "Team Standup Updates",
+                preview: "John: Fixed the sync bug, working on push notifications. Sarah: Completed user testing, 87% satisfaction rate. Mike: API optimization complete.",
+                source: "WeChat",
+                sourceApp: .wechat,
+                type: .text,
+                isFavorite: false,
+                timestamp: Date().addingTimeInterval(-21600) // 6 hours ago
+            ),
+            ContentItem(
+                title: "App Store Screenshots",
+                preview: "Collection of promotional screenshots for app store listing. Shows key features: dashboard, grid view, task management.",
+                source: "Camera",
+                sourceApp: .camera,
+                type: .image,
+                isFavorite: true,
+                timestamp: Date().addingTimeInterval(-25200) // 7 hours ago
+            ),
+            ContentItem(
+                title: "React vs SwiftUI Performance",
+                preview: "Detailed comparison of React Native vs native SwiftUI performance. SwiftUI shows 40% better rendering performance in complex UIs.",
+                source: "medium.com",
+                sourceApp: .safari,
+                type: .web,
+                isFavorite: false,
+                timestamp: Date().addingTimeInterval(-28800) // 8 hours ago
+            ),
+            // Older content for variety
+            ContentItem(
+                title: "Customer Feedback Summary",
+                preview: "Compiled user feedback from last month: 78% love the new dashboard, 65% want better search, 23% need offline sync.",
+                source: "Email",
+                sourceApp: .clipboard,
+                type: .text,
+                isFavorite: true,
+                timestamp: Date().addingTimeInterval(-86400) // 1 day ago
+            ),
+            ContentItem(
+                title: "Architecture Diagrams",
+                preview: "System architecture showing microservices, database design, and API structure. Updated with new real-time sync component.",
+                source: "Camera Roll",
+                sourceApp: .photos,
+                type: .image,
+                isFavorite: false,
+                timestamp: Date().addingTimeInterval(-172800) // 2 days ago
+            ),
+            ContentItem(
+                title: "Design System Guidelines",
+                preview: "Complete design system documentation: colors, typography, spacing, components. Includes dark mode specifications.",
+                source: "figma.com",
+                sourceApp: .safari,
+                type: .web,
+                isFavorite: true,
+                timestamp: Date().addingTimeInterval(-259200) // 3 days ago
             )
         ]
     }

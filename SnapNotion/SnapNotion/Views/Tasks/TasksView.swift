@@ -100,9 +100,92 @@ struct SimpleTaskItem: Identifiable {
     }
     
     static let sampleTasks: [SimpleTaskItem] = [
-        SimpleTaskItem(title: "Review captured articles", description: "Go through the articles captured this week", isCompleted: false, priority: .high, dueDate: Date()),
-        SimpleTaskItem(title: "Organize project notes", description: "Sort the project notes into proper categories", isCompleted: false, priority: .medium, dueDate: Calendar.current.date(byAdding: .day, value: 3, to: Date())),
-        SimpleTaskItem(title: "Complete task automation setup", description: "Finished setting up the AI task generation", isCompleted: true, priority: .low, dueDate: Calendar.current.date(byAdding: .day, value: -2, to: Date()))
+        // Urgent/Overdue tasks
+        SimpleTaskItem(
+            title: "Review Q4 planning meeting notes", 
+            description: "Extract action items and decisions from the planning session", 
+            isCompleted: false, 
+            priority: .high, 
+            dueDate: Calendar.current.date(byAdding: .hour, value: -2, to: Date()) // 2 hours overdue
+        ),
+        SimpleTaskItem(
+            title: "Respond to customer feedback", 
+            description: "Address user feedback about search functionality improvements", 
+            isCompleted: false, 
+            priority: .high, 
+            dueDate: Date().addingTimeInterval(3600) // 1 hour from now
+        ),
+        
+        // Due today
+        SimpleTaskItem(
+            title: "Implement SwiftUI grid layout", 
+            description: "Apply best practices from the captured article to our interface", 
+            isCompleted: false, 
+            priority: .medium, 
+            dueDate: Date().addingTimeInterval(14400) // 4 hours from now
+        ),
+        SimpleTaskItem(
+            title: "Test authentication module", 
+            description: "Add unit tests for edge cases mentioned in code review", 
+            isCompleted: false, 
+            priority: .medium, 
+            dueDate: Date().addingTimeInterval(21600) // 6 hours from now
+        ),
+        
+        // Due tomorrow
+        SimpleTaskItem(
+            title: "Update app store screenshots", 
+            description: "Use new dashboard design for promotional materials", 
+            isCompleted: false, 
+            priority: .medium, 
+            dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date())
+        ),
+        SimpleTaskItem(
+            title: "Analyze competitor research", 
+            description: "Review market research report findings and create action plan", 
+            isCompleted: false, 
+            priority: .low, 
+            dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date())
+        ),
+        
+        // Due this week
+        SimpleTaskItem(
+            title: "Prepare design system documentation", 
+            description: "Compile design guidelines for the development team", 
+            isCompleted: false, 
+            priority: .medium, 
+            dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date())
+        ),
+        SimpleTaskItem(
+            title: "Optimize API performance", 
+            description: "Implement improvements mentioned in team standup", 
+            isCompleted: false, 
+            priority: .low, 
+            dueDate: Calendar.current.date(byAdding: .day, value: 3, to: Date())
+        ),
+        
+        // Completed tasks
+        SimpleTaskItem(
+            title: "Fix sync bug", 
+            description: "Resolved synchronization issues reported by users", 
+            isCompleted: true, 
+            priority: .high, 
+            dueDate: Calendar.current.date(byAdding: .day, value: -1, to: Date())
+        ),
+        SimpleTaskItem(
+            title: "Complete user testing", 
+            description: "Achieved 87% satisfaction rate in usability testing", 
+            isCompleted: true, 
+            priority: .medium, 
+            dueDate: Calendar.current.date(byAdding: .day, value: -2, to: Date())
+        ),
+        SimpleTaskItem(
+            title: "Research React vs SwiftUI", 
+            description: "Compare performance metrics for technology decision", 
+            isCompleted: true, 
+            priority: .low, 
+            dueDate: Calendar.current.date(byAdding: .day, value: -3, to: Date())
+        )
     ]
 }
 
