@@ -25,7 +25,7 @@ class ContentManager: ObservableObject {
     
     private let logger = Logger(subsystem: "com.snapnotion.content", category: "ContentManager")
     private let persistenceController = PersistenceController.shared
-    private let aiAnalyzer = AIContentAnalyzer.shared
+    private let aiAnalyzer = AdvancedAIContentAnalyzer.shared
     private let taggingEngine = SemanticTaggingEngine.shared
     private let taskGenerator = TaskGenerationEngine.shared
     private let searchEngine = SemanticSearchEngine.shared

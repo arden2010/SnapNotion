@@ -18,10 +18,10 @@ class TaskGenerationEngine: ObservableObject {
     
     @Published var isGeneratingTasks = false
     @Published var generatedTasks: [AIGeneratedTask] = []
-    @Published var taskSuggestions: [TaskSuggestion] = []
+    @Published var taskSuggestions: [SmartTaskSuggestion] = []
     
     private let logger = Logger(subsystem: "com.snapnotion.tasks", category: "TaskGenerator")
-    private let aiAnalyzer = AIContentAnalyzer.shared
+    private let aiAnalyzer = AdvancedAIContentAnalyzer.shared
     
     // Advanced task patterns and their corresponding actions
     private let taskPatterns: [TaskPattern] = [
@@ -163,7 +163,7 @@ class TaskGenerationEngine: ObservableObject {
                     let task = AIGeneratedTask(
                         title: generateTaskTitle(from: sentence, pattern: pattern),
                         description: enhanceTaskDescription(sentence, pattern: pattern),
-                        priority: adjustPriorityByContext(pattern.priority, analysis: analysis),
+                        priority: convertToGeneratedTaskPriority(pattern.priority),
                         category: pattern.category,
                         dueDate: calculateDueDate(pattern.dueOffset),
                         confidence: calculatePatternConfidence(matchingKeywords.count, totalKeywords: pattern.keywords.count),
@@ -211,7 +211,7 @@ class TaskGenerationEngine: ObservableObject {
             AIGeneratedTask(
                 title: suggestedTask.title,
                 description: suggestedTask.description,
-                priority: suggestedTask.priority,
+                priority: convertAITaskPriority(suggestedTask.priority),
                 category: categorizeSuggestedTask(suggestedTask),
                 dueDate: suggestedTask.dueDate ?? Calendar.current.date(byAdding: .day, value: 1, to: Date()),
                 confidence: suggestedTask.confidence,
@@ -272,7 +272,7 @@ class TaskGenerationEngine: ObservableObject {
                 let task = AIGeneratedTask(
                     title: "Time-sensitive: \(expression)",
                     description: "Handle time-sensitive content: \(String(text.prefix(100)))",
-                    priority: priority,
+                    priority: convertToGeneratedTaskPriority(priority),
                     category: .deadline,
                     dueDate: Calendar.current.date(byAdding: component, value: value, to: Date()),
                     confidence: 0.8,
@@ -458,6 +458,7 @@ class TaskGenerationEngine: ObservableObject {
         
         // Priority boost
         switch task.priority {
+        case .urgent: score += 0.5
         case .high: score += 0.3
         case .medium: score += 0.1
         case .low: break
@@ -543,6 +544,42 @@ class TaskGenerationEngine: ObservableObject {
         return Double(matchingKeywords) / Double(totalKeywords)
     }
     
+    private func estimateDurationFromPattern(_ pattern: TaskPattern) -> TaskDuration {
+        // Simple duration estimation based on task pattern
+        switch pattern.priority {
+        case .low:
+            return .minutes(15)
+        case .medium:
+            return .minutes(30)
+        case .high, .urgent:
+            return .hours(1)
+        }
+    }
+    
+    private func convertToGeneratedTaskPriority(_ priority: TaskPriority) -> GeneratedTaskPriority {
+        switch priority {
+        case .low:
+            return .low
+        case .medium:
+            return .medium
+        case .high:
+            return .high
+        case .urgent:
+            return .urgent
+        }
+    }
+    
+    private func convertAITaskPriority(_ priority: AITaskPriority) -> GeneratedTaskPriority {
+        switch priority {
+        case .low:
+            return .low
+        case .medium:
+            return .medium
+        case .high:
+            return .high
+        }
+    }
+    
     private func extractTaskTags(from sentence: String, pattern: TaskPattern) -> [String] {
         return pattern.keywords.filter { sentence.lowercased().contains($0) } + [pattern.category.rawValue]
     }
@@ -574,11 +611,18 @@ class TaskGenerationEngine: ObservableObject {
 
 // MARK: - Supporting Data Models
 
-struct AIAIGeneratedTask: Identifiable, Codable {
+enum GeneratedTaskPriority: String, CaseIterable, Codable {
+    case low = "low"
+    case medium = "medium"
+    case high = "high"
+    case urgent = "urgent"
+}
+
+struct AIGeneratedTask: Identifiable, Codable {
     let id = UUID()
     let title: String
     let description: String
-    let priority: TaskPriority
+    let priority: GeneratedTaskPriority
     let category: TaskCategory
     let dueDate: Date?
     let confidence: Double

@@ -18,12 +18,12 @@ class SemanticSearchEngine: ObservableObject {
     static let shared = SemanticSearchEngine()
     
     @Published var isSearching = false
-    @Published var searchResults: [AIAISearchResult] = []
+    @Published var searchResults: [AISearchResult] = []
     @Published var searchSuggestions: [AISearchSuggestion] = []
     @Published var recentSearches: [String] = []
     
     private let logger = Logger(subsystem: "com.snapnotion.search", category: "SemanticSearch")
-    private let aiAnalyzer = AIContentAnalyzer.shared
+    private let aiAnalyzer = AdvancedAIContentAnalyzer.shared
     private let taggingEngine = SemanticTaggingEngine.shared
     private let persistenceController = PersistenceController.shared
     
@@ -33,7 +33,7 @@ class SemanticSearchEngine: ObservableObject {
     
     // MARK: - Core Search Functions
     
-    func search(_ query: String, filters: SearchFilters = SearchFilters()) async -> [AIAISearchResult] {
+    func search(_ query: String, filters: SearchFilters = SearchFilters()) async -> [AISearchResult] {
         isSearching = true
         defer { isSearching = false }
         
@@ -51,7 +51,7 @@ class SemanticSearchEngine: ObservableObject {
         // Add to recent searches
         addToRecentSearches(query)
         
-        var results: [AIAISearchResult] = []
+        var results: [AISearchResult] = []
         
         // 1. Exact text matching (highest priority)
         results.append(contentsOf: await performTextSearch(query, filters: filters))
@@ -101,7 +101,7 @@ class SemanticSearchEngine: ObservableObject {
         return searchSuggestions
     }
     
-    func performAdvancedSearch(_ query: AdvancedSearchQuery) async -> [AIAISearchResult] {
+    func performAdvancedSearch(_ query: AdvancedSearchQuery) async -> [AISearchResult] {
         isSearching = true
         defer { isSearching = false }
         
@@ -114,7 +114,7 @@ class SemanticSearchEngine: ObservableObject {
     
     // MARK: - Search Implementation Methods
     
-    private func performTextSearch(_ query: String, filters: SearchFilters) async -> [AIAISearchResult] {
+    private func performTextSearch(_ query: String, filters: SearchFilters) async -> [AISearchResult] {
         let context = persistenceController.container.viewContext
         let request: NSFetchRequest<ContentNode> = ContentNode.fetchRequest()
         
@@ -152,12 +152,12 @@ class SemanticSearchEngine: ObservableObject {
         }
     }
     
-    private func performSemanticSearch(_ query: String, filters: SearchFilters) async -> [AIAISearchResult] {
+    private func performSemanticSearch(_ query: String, filters: SearchFilters) async -> [AISearchResult] {
         // Extract keywords and entities from query
         let queryKeywords = await extractKeywords(from: query)
         let queryEntities = await extractEntities(from: query)
         
-        var semanticResults: [AIAISearchResult] = []
+        var semanticResults: [AISearchResult] = []
         
         // Search through indexed content
         for (contentId, indexEntry) in searchIndex {
@@ -178,10 +178,10 @@ class SemanticSearchEngine: ObservableObject {
         return semanticResults.sorted { $0.relevanceScore > $1.relevanceScore }
     }
     
-    private func performTagSearch(_ query: String, filters: SearchFilters) async -> [AIAISearchResult] {
+    private func performTagSearch(_ query: String, filters: SearchFilters) async -> [AISearchResult] {
         // Search for content with tags matching the query
         let queryTags = query.lowercased().components(separatedBy: .whitespacesAndNewlines)
-        var tagResults: [AIAISearchResult] = []
+        var tagResults: [AISearchResult] = []
         
         for (contentId, indexEntry) in searchIndex {
             let matchingTags = indexEntry.tags.filter { tag in
@@ -201,9 +201,9 @@ class SemanticSearchEngine: ObservableObject {
         return tagResults
     }
     
-    private func performContextualSearch(_ query: String, filters: SearchFilters) async -> [AIAISearchResult] {
+    private func performContextualSearch(_ query: String, filters: SearchFilters) async -> [AISearchResult] {
         // AI-enhanced contextual search using content analysis
-        var contextualResults: [AIAISearchResult] = []
+        var contextualResults: [AISearchResult] = []
         
         do {
             // Analyze query intent
@@ -261,7 +261,7 @@ class SemanticSearchEngine: ObservableObject {
             }
             
             isIndexBuilt = true
-            logger.info("Search index built with \(searchIndex.count) entries")
+            logger.info("Search index built with \(self.searchIndex.count) entries")
         } catch {
             logger.error("Failed to build search index: \(error.localizedDescription)")
         }
@@ -327,7 +327,7 @@ class SemanticSearchEngine: ObservableObject {
         tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .nameType, options: options) { tag, tokenRange in
             if let tag = tag {
                 let entityText = String(text[tokenRange])
-                let entityType: EntityType
+                let entityType: AIEntityType
                 
                 switch tag {
                 case .personalName: entityType = .person
@@ -508,7 +508,7 @@ class SemanticSearchEngine: ObservableObject {
         return min(score, 1.0)
     }
     
-    private func removeDuplicateResults(_ results: [AIAISearchResult]) -> [AIAISearchResult] {
+    private func removeDuplicateResults(_ results: [AISearchResult]) -> [AISearchResult] {
         var seen = Set<UUID>()
         return results.filter { result in
             if seen.contains(result.contentId) {
@@ -519,7 +519,7 @@ class SemanticSearchEngine: ObservableObject {
         }
     }
     
-    private func rankAISearchResults(_ results: [AIAISearchResult], query: String) -> [AIAISearchResult] {
+    private func rankAISearchResults(_ results: [AISearchResult], query: String) -> [AISearchResult] {
         return results.sorted { result1, result2 in
             // Primary sort: relevance score
             if result1.relevanceScore != result2.relevanceScore {
@@ -611,7 +611,7 @@ class SemanticSearchEngine: ObservableObject {
         return stopWords.contains(word.lowercased())
     }
     
-    private func searchWithAdvancedCriteria(_ query: AdvancedSearchQuery) async -> [AIAISearchResult] {
+    private func searchWithAdvancedCriteria(_ query: AdvancedSearchQuery) async -> [AISearchResult] {
         // Implementation for advanced search with complex criteria
         // This would include date ranges, multiple content types, tag combinations, etc.
         return []
@@ -620,7 +620,7 @@ class SemanticSearchEngine: ObservableObject {
 
 // MARK: - Supporting Data Models
 
-struct AIAISearchResult: Identifiable, Codable {
+struct AISearchResult: Identifiable, Codable {
     let id = UUID()
     let contentId: UUID
     let title: String
@@ -652,7 +652,7 @@ enum HighlightType: String, Codable {
     case tag = "tag"
 }
 
-struct AIAISearchSuggestion: Identifiable, Hashable, Codable {
+struct AISearchSuggestion: Identifiable, Hashable, Codable {
     let id = UUID()
     let text: String
     let type: SuggestionType

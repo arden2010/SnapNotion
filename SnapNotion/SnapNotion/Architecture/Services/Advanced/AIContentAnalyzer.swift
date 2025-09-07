@@ -13,9 +13,9 @@ import SwiftUI
 import os.log
 
 @MainActor
-class AIContentAnalyzer: ObservableObject {
+class AdvancedAIContentAnalyzer: ObservableObject {
     
-    static let shared = AIContentAnalyzer()
+    static let shared = AdvancedAIContentAnalyzer()
     
     private init() { }
     
@@ -24,7 +24,7 @@ class AIContentAnalyzer: ObservableObject {
     
     private let logger = Logger(subsystem: "com.snapnotion.ai", category: "ContentAnalyzer")
     private let nlProcessor = NLLanguageRecognizer()
-    private let sentimentAnalyzer = NLModel.sentimentClassifier()
+    private let sentimentAnalyzer: NLModel? = nil // Placeholder for sentiment model
     
     // MARK: - Core Analysis Pipeline
     
@@ -239,14 +239,14 @@ class AIContentAnalyzer: ObservableObject {
         
         // Task detection patterns
         let taskPatterns = [
-            ("need to", TaskPriority.medium),
-            ("should", TaskPriority.low),
-            ("must", TaskPriority.high),
-            ("urgent", TaskPriority.high),
-            ("deadline", TaskPriority.high),
-            ("todo", TaskPriority.medium),
-            ("remember", TaskPriority.medium),
-            ("action", TaskPriority.medium)
+            ("need to", AITaskPriority.medium),
+            ("should", AITaskPriority.low),
+            ("must", AITaskPriority.high),
+            ("urgent", AITaskPriority.high),
+            ("deadline", AITaskPriority.high),
+            ("todo", AITaskPriority.medium),
+            ("remember", AITaskPriority.medium),
+            ("action", AITaskPriority.medium)
         ]
         
         let sentences = text.components(separatedBy: .init(charactersIn: ".!?\n"))
@@ -419,7 +419,7 @@ struct ContentAnalysis: Identifiable, Codable {
     let analyzedAt: Date
 }
 
-enum AIAIContentCategory: String, CaseIterable, Codable {
+enum AIContentCategory: String, CaseIterable, Codable {
     case business = "business"
     case personal = "personal"
     case learning = "learning"
@@ -436,7 +436,7 @@ struct NamedEntity: Identifiable, Codable, Hashable {
     let range: Int
 }
 
-enum AIAIEntityType: String, CaseIterable, Codable {
+enum AIEntityType: String, CaseIterable, Codable {
     case person = "person"
     case location = "location"
     case organization = "organization"
@@ -454,13 +454,13 @@ struct SuggestedTask: Identifiable, Codable {
     let id = UUID()
     let title: String
     let description: String
-    let priority: TaskPriority
+    let priority: AITaskPriority
     let dueDate: Date?
     let confidence: Double
     let sourceContentId: UUID
 }
 
-enum TaskPriority: String, CaseIterable, Codable {
+enum AITaskPriority: String, CaseIterable, Codable {
     case low = "low"
     case medium = "medium"
     case high = "high"

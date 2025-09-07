@@ -20,7 +20,7 @@ class SemanticTaggingEngine: ObservableObject {
     @Published var tagSuggestions: [TagSuggestion] = []
     
     private let logger = Logger(subsystem: "com.snapnotion.semantic", category: "TaggingEngine")
-    private let aiAnalyzer = AIContentAnalyzer.shared
+    private let aiAnalyzer = AdvancedAIContentAnalyzer.shared
     
     // Predefined tag hierarchies for better organization
     private let tagHierarchies: [String: [String]] = [
