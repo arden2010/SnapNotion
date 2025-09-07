@@ -25,6 +25,10 @@ class ContentManager: ObservableObject {
     
     private let logger = Logger(subsystem: "com.snapnotion.content", category: "ContentManager")
     private let persistenceController = PersistenceController.shared
+    private let aiAnalyzer = AIContentAnalyzer.shared
+    private let taggingEngine = SemanticTaggingEngine.shared
+    private let taskGenerator = TaskGenerationEngine.shared
+    private let searchEngine = SemanticSearchEngine.shared
     
     private init() {
         loadAllContent()
@@ -378,6 +382,11 @@ class ContentManager: ObservableObject {
                 self.loadAllContent()
             }
             
+            // Trigger AI processing in background
+            Task {
+                await self.processContentWithAI(contentData)
+            }
+            
             return contentData
         }
     }
@@ -392,6 +401,58 @@ class ContentManager: ObservableObject {
         let firstLine = trimmed.components(separatedBy: .newlines).first ?? ""
         let title = String(firstLine.prefix(50))
         return title.isEmpty ? "Untitled" : title
+    }
+    
+    // MARK: - AI Processing Integration
+    
+    private func processContentWithAI(_ content: ContentNodeData) async {
+        do {
+            logger.info("Starting AI processing for content: \(content.id)")
+            
+            // 1. AI Content Analysis
+            let analysis = try await aiAnalyzer.analyzeContent(content)
+            logger.info("AI analysis completed with confidence: \(analysis.confidence)")
+            
+            // 2. Generate Semantic Tags
+            let semanticTags = await taggingEngine.generateSemanticTags(for: content)
+            logger.info("Generated \(semanticTags.count) semantic tags")
+            
+            // 3. Generate Tasks
+            let generatedTasks = try await taskGenerator.generateTasksFromContent(content)
+            logger.info("Generated \(generatedTasks.count) tasks")
+            
+            // 4. Update Search Index
+            await searchEngine.updateSearchIndex(for: content.id, content: content)
+            logger.info("Updated search index")
+            
+            // 5. Store AI results in Core Data (could be enhanced to store analysis results)
+            await storeAIResults(contentId: content.id, analysis: analysis, tags: semanticTags, tasks: generatedTasks)
+            
+            logger.info("AI processing completed for content: \(content.id)")
+            
+        } catch {
+            logger.error("AI processing failed for content \(content.id): \(error.localizedDescription)")
+            await MainActor.run {
+                self.lastError = error
+            }
+        }
+    }
+    
+    private func storeAIResults(contentId: UUID, analysis: ContentAnalysis, tags: [SemanticTag], tasks: [AIGeneratedTask]) async {
+        // TODO: Store AI analysis results, tags, and generated tasks in Core Data
+        // This would involve creating additional Core Data entities for:
+        // - ContentAnalysis
+        // - SemanticTags
+        // - GeneratedTasks
+        
+        logger.info("AI results stored for content: \(contentId)")
+        logger.info("- Analysis confidence: \(analysis.confidence)")
+        logger.info("- Tags: \(tags.count)")
+        logger.info("- Tasks: \(tasks.count)")
+        logger.info("- Summary: \(analysis.summary)")
+        
+        // Apply tags to tagging engine
+        taggingEngine.applyTagsToContent(contentId, tags: tags)
     }
     
     private func convertToContentNodeData(_ node: ContentNode) -> ContentNodeData? {
