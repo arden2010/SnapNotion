@@ -12,12 +12,15 @@ import AVFoundation
 struct AddContentSheet: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var cameraManager = CameraManager()
-    @StateObject private var clipboardMonitor = ClipboardMonitor()
-    private let contentProcessor = ContentCaptureProcessor.shared
+    @StateObject private var contentManager = ContentManager.shared
     @State private var showingCamera = false
     @State private var showingPhotoPicker = false
-    @State private var showingProcessing = false
-    @State private var processingMessage = ""
+    @State private var showingDocumentPicker = false
+    @State private var showingTextEditor = false
+    @State private var showingWebLinkDialog = false
+    @State private var textInput = ""
+    @State private var webURLInput = ""
+    @State private var isProcessing = false
     
     var body: some View {
         NavigationView {
@@ -73,8 +76,7 @@ struct AddContentSheet: View {
                                 subtitle: "Create new text content manually",
                                 color: .orange
                             ) {
-                                // TODO: Create text note
-                                dismiss()
+                                showingTextEditor = true
                             }
                             
                             AddContentOption(
@@ -83,8 +85,7 @@ struct AddContentSheet: View {
                                 subtitle: "Save and analyze website content",
                                 color: .purple
                             ) {
-                                // TODO: Add web link
-                                dismiss()
+                                showingWebLinkDialog = true
                             }
                             
                             
@@ -94,8 +95,18 @@ struct AddContentSheet: View {
                                 subtitle: "Import and analyze PDFs, documents",
                                 color: .indigo
                             ) {
-                                // TODO: Import file
-                                dismiss()
+                                showingDocumentPicker = true
+                            }
+                            
+                            AddContentOption(
+                                icon: "doc.on.clipboard",
+                                title: "From Clipboard",
+                                subtitle: "Process content from clipboard",
+                                color: .red
+                            ) {
+                                Task {
+                                    await processClipboard()
+                                }
                             }
                         }
                     }
@@ -115,20 +126,45 @@ struct AddContentSheet: View {
         .sheet(isPresented: $showingCamera) {
             CameraView { capturedImage in
                 Task {
-                    await processImage(capturedImage, source: "Camera")
+                    await processImageFromCamera(capturedImage)
                 }
             }
         }
         .sheet(isPresented: $showingPhotoPicker) {
             PhotoPickerView { selectedImage in
                 Task {
-                    await processImage(selectedImage, source: "Photo Library")
+                    await processImageFromPhotoLibrary(selectedImage)
                 }
             }
         }
+        .sheet(isPresented: $showingTextEditor) {
+            TextEditorSheet(text: $textInput) { text in
+                Task {
+                    await processTextInput(text)
+                }
+            }
+        }
+        .sheet(isPresented: $showingDocumentPicker) {
+            DocumentPickerView { url in
+                Task {
+                    await processDocumentFile(url)
+                }
+            }
+        }
+        .alert("Add Web Link", isPresented: $showingWebLinkDialog) {
+            TextField("Enter URL", text: $webURLInput)
+            Button("Cancel", role: .cancel) { }
+            Button("Add") {
+                Task {
+                    await processWebURL(webURLInput)
+                }
+            }
+        } message: {
+            Text("Enter a web URL to save and analyze")
+        }
         .overlay {
-            if showingProcessing {
-                ProcessingOverlay(message: processingMessage)
+            if isProcessing {
+                ProcessingOverlay(message: "Processing content...")
             }
         }
     }
@@ -150,116 +186,112 @@ struct AddContentSheet: View {
         showingPhotoPicker = true
     }
     
-    private func processImage(_ image: UIImage, source: String) async {
-        await MainActor.run {
-            showingProcessing = true
-            processingMessage = "🧠 AI is analyzing the image..."
-        }
-        
+    // MARK: - Content Processing Methods
+    
+    private func processImageFromCamera(_ image: UIImage) async {
+        isProcessing = true
         do {
-            // Convert UIImage to Data
-            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-                throw ContentProcessingError.imageConversionFailed
-            }
-            
-            // Process with your algorithms
-            let result = try await contentProcessor.processImage(imageData, source: source)
-            
+            let _ = try await contentManager.createContentFromCamera(image: image)
             await MainActor.run {
-                processingMessage = "✅ Content processed successfully!"
-                
-                // Dismiss processing overlay after brief success message
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.showingProcessing = false
-                    dismiss()
-                }
+                isProcessing = false
+                dismiss()
             }
-            
         } catch {
             await MainActor.run {
-                showingProcessing = false
-                processingMessage = "Failed to process image: \(error.localizedDescription)"
-                
-                // Show error for a moment then dismiss
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    self.showingProcessing = false
-                }
+                isProcessing = false
+                // Handle error appropriately
             }
         }
     }
     
-    private func processClipboardContent() {
-        guard let clipboardContent = clipboardMonitor.getClipboardContent() else {
-            return
-        }
-        
-        Task {
+    private func processImageFromPhotoLibrary(_ image: UIImage) async {
+        isProcessing = true
+        do {
+            let _ = try await contentManager.createContentFromPhotoLibrary(image: image)
             await MainActor.run {
-                showingProcessing = true
-                processingMessage = "📋 Processing clipboard content..."
+                isProcessing = false
+                dismiss()
             }
-            
-            do {
-                let result: ContentItem
-                
-                switch clipboardContent.type {
-                case .text:
-                    if let text = clipboardContent.text {
-                        result = try await contentProcessor.processText(text, source: "Clipboard")
-                    } else {
-                        throw ContentProcessingError.aiProcessingFailed
-                    }
-                    
-                case .image:
-                    if let imageData = clipboardContent.data {
-                        result = try await contentProcessor.processImage(imageData, source: "Clipboard")
-                    } else {
-                        throw ContentProcessingError.imageConversionFailed
-                    }
-                    
-                case .web:
-                    if let url = clipboardContent.url {
-                        result = try await contentProcessor.processWebURL(url, source: "Clipboard")
-                    } else {
-                        throw ContentProcessingError.aiProcessingFailed
-                    }
-                    
-                case .mixed:
-                    // Handle mixed content type
-                    if let text = clipboardContent.text {
-                        result = try await contentProcessor.processText(text, source: "Clipboard")
-                    } else {
-                        throw ContentProcessingError.aiProcessingFailed
-                    }
-                    
-                case .pdf:
-                    // Handle PDF content type
-                    if let data = clipboardContent.data {
-                        result = try await contentProcessor.processImage(data, source: "Clipboard")
-                    } else {
-                        throw ContentProcessingError.aiProcessingFailed
-                    }
-                }
-                
+        } catch {
+            await MainActor.run {
+                isProcessing = false
+                // Handle error appropriately
+            }
+        }
+    }
+    
+    private func processTextInput(_ text: String) async {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        isProcessing = true
+        do {
+            let _ = try await contentManager.createContentFromText(text)
+            await MainActor.run {
+                isProcessing = false
+                textInput = ""
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                isProcessing = false
+                // Handle error appropriately
+            }
+        }
+    }
+    
+    private func processWebURL(_ urlString: String) async {
+        guard let url = URL(string: urlString), !urlString.isEmpty else { return }
+        
+        isProcessing = true
+        do {
+            let _ = try await contentManager.createContentFromURL(url)
+            await MainActor.run {
+                isProcessing = false
+                webURLInput = ""
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                isProcessing = false
+                // Handle error appropriately
+            }
+        }
+    }
+    
+    private func processDocumentFile(_ url: URL) async {
+        isProcessing = true
+        do {
+            let _ = try await contentManager.createContentFromFile(at: url)
+            await MainActor.run {
+                isProcessing = false
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                isProcessing = false
+                // Handle error appropriately
+            }
+        }
+    }
+    
+    private func processClipboard() async {
+        isProcessing = true
+        do {
+            if let _ = try await contentManager.createContentFromClipboard() {
                 await MainActor.run {
-                    processingMessage = "✅ Clipboard content processed successfully!"
-                    
-                    // Dismiss processing overlay after brief success message
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        self.showingProcessing = false
-                        self.dismiss()
-                    }
+                    isProcessing = false
+                    dismiss()
                 }
-                
-            } catch {
+            } else {
                 await MainActor.run {
-                    processingMessage = "❌ Failed to process clipboard: \(error.localizedDescription)"
-                    
-                    // Show error for a moment then dismiss
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        self.showingProcessing = false
-                    }
+                    isProcessing = false
+                    // No clipboard content to process
                 }
+            }
+        } catch {
+            await MainActor.run {
+                isProcessing = false
+                // Handle error appropriately
             }
         }
     }

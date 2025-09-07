@@ -72,6 +72,44 @@ extension ContentItem {
     }
 }
 
+// MARK: - ContentNodeData Extensions for UI Compatibility
+
+extension ContentNodeData {
+    // Bridge to work with existing UI components
+    var processingStatusType: ProcessingStatusType {
+        switch processingStatus {
+        case .pending: return .pending
+        case .processing: return .processing
+        case .completed: return .completed
+        case .failed: return .failed
+        }
+    }
+    
+    var sourceApp: AppSource {
+        return AppSource(rawValue: source) ?? .other
+    }
+    
+    var attachments: [AttachmentPreview] {
+        return [] // TODO: Implement attachments when needed
+    }
+    
+    // Convert to ContentItem for UI compatibility
+    func asContentItem() -> ContentItem {
+        return ContentItem(
+            id: id,
+            title: title,
+            preview: preview,
+            source: source,
+            sourceApp: sourceApp,
+            type: type,
+            isFavorite: isFavorite,
+            timestamp: timestamp,
+            attachments: attachments,
+            processingStatus: processingStatus.rawValue
+        )
+    }
+}
+
 enum ContentType: String, CaseIterable, Codable {
     case text = "text"
     case image = "image"

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MainContentView: View {
-    @StateObject private var viewModel = ContentViewModel()
+    @StateObject private var contentManager = ContentManager.shared
     @StateObject private var clipboardMonitor = ClipboardMonitor()
     @StateObject private var screenshotDetector = ScreenshotDetectionManager.shared
     @StateObject private var taskManager = TaskManager()
@@ -16,9 +16,6 @@ struct MainContentView: View {
     @State private var showingAddSheet = false
     @State private var showingOptionsMenu = false
     @State private var selectedViewStyle: ContentViewStyle = .standard
-    @State private var showingProcessing = false
-    @State private var processingMessage = ""
-    private let contentProcessor = ContentCaptureProcessor.shared
     
     var body: some View {
         NavigationView {
@@ -38,7 +35,7 @@ struct MainContentView: View {
                     .padding(.horizontal)
                     
                     // Inbox View - Shows tasks and content by sources separately
-                    InboxContentView(viewStyle: selectedViewStyle, viewModel: viewModel, taskManager: taskManager)
+                    InboxContentView(viewStyle: selectedViewStyle, contentManager: contentManager, taskManager: taskManager)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .navigationTitle("Inbox")
@@ -85,8 +82,8 @@ struct MainContentView: View {
             ContentOptionsMenu()
         }
         .overlay {
-            if showingProcessing {
-                ProcessingOverlay(message: processingMessage)
+            if contentManager.isProcessing {
+                ProcessingOverlay(message: "Processing content...")
             }
         }
         .onAppear {
@@ -96,42 +93,9 @@ struct MainContentView: View {
     
     // MARK: - Action Handlers
     private func handleClipboardPaste() {
-        guard let clipboardContent = clipboardMonitor.getClipboardContent() else { return }
-        
         Task {
-            // Process the content
-            await viewModel.processSharedContent(clipboardContent)
-            
-            // Generate tasks from the content if it contains actionable items
-            await generateTasksFromContent(clipboardContent)
-        }
-    }
-    
-    private func generateTasksFromContent(_ content: SharedContent) async {
-        // Simple task detection - look for action words in text
-        guard let text = content.text, !text.isEmpty else { return }
-        
-        let actionWords = ["generate", "create", "make", "build", "implement", "add", "fix", "update", "review", "test", "deploy", "write", "send", "call", "schedule", "complete", "finish", "submit"]
-        let lowercaseText = text.lowercased()
-        
-        // Check if text contains action words
-        let containsAction = actionWords.first { lowercaseText.contains($0) }
-        
-        if let actionWord = containsAction {
-            // Create a task based on the content
-            let taskTitle = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            let taskDescription = "Auto-generated from clipboard: \(content.sourceApp.displayName)"
-            
-            let newTask = SimpleTaskItem(
-                title: String(taskTitle.prefix(100)), // Limit title length
-                description: taskDescription,
-                isCompleted: false,
-                priority: .medium,
-                dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()) // Due tomorrow
-            )
-            
-            await MainActor.run {
-                taskManager.tasks.insert(newTask, at: 0)
+            if let _ = try? await contentManager.createContentFromClipboard() {
+                // Content successfully processed from clipboard
             }
         }
     }
@@ -142,73 +106,9 @@ struct MainContentView: View {
     }
     
     private func handleSmartPasteAction() {
-        guard let clipboardContent = clipboardMonitor.getClipboardContent() else {
-            return
-        }
-        
         Task {
-            await MainActor.run {
-                showingProcessing = true
-                processingMessage = "📋 Processing clipboard content..."
-            }
-            
-            do {
-                let result: ContentItem
-                
-                switch clipboardContent.type {
-                case .text:
-                    if let text = clipboardContent.text {
-                        result = try await contentProcessor.processText(text, source: "Smart FAB - Inbox")
-                    } else {
-                        throw ContentProcessingError.aiProcessingFailed
-                    }
-                    
-                case .image:
-                    if let imageData = clipboardContent.data {
-                        result = try await contentProcessor.processImage(imageData, source: "Smart FAB - Inbox")
-                    } else {
-                        throw ContentProcessingError.imageConversionFailed
-                    }
-                    
-                case .web:
-                    if let url = clipboardContent.url {
-                        result = try await contentProcessor.processWebURL(url, source: "Smart FAB - Inbox")
-                    } else {
-                        throw ContentProcessingError.aiProcessingFailed
-                    }
-                    
-                case .mixed, .pdf:
-                    if let text = clipboardContent.text {
-                        result = try await contentProcessor.processText(text, source: "Smart FAB - Inbox")
-                    } else {
-                        throw ContentProcessingError.aiProcessingFailed
-                    }
-                }
-                
-                await MainActor.run {
-                    processingMessage = "✅ Content processed successfully!"
-                    
-                    // Brief success message then dismiss
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        self.showingProcessing = false
-                    }
-                    
-                    // Refresh the view model to show new content
-                    viewModel.loadInitialContent()
-                }
-                
-                // Generate tasks from the processed content (outside MainActor.run)
-                await generateTasksFromContent(clipboardContent)
-                
-            } catch {
-                await MainActor.run {
-                    processingMessage = "❌ Failed to process: \(error.localizedDescription)"
-                    
-                    // Show error for a moment then dismiss
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        self.showingProcessing = false
-                    }
-                }
+            if let _ = try? await contentManager.createContentFromClipboard() {
+                // Content successfully processed from clipboard
             }
         }
     }
@@ -467,7 +367,7 @@ struct ContentContextMenu: View {
 // MARK: - Inbox Content View
 struct InboxContentView: View {
     let viewStyle: ContentViewStyle
-    @ObservedObject var viewModel: ContentViewModel
+    @ObservedObject var contentManager: ContentManager
     @ObservedObject var taskManager: TaskManager
     
     var body: some View {
@@ -544,13 +444,13 @@ struct InboxContentView: View {
                         
                         Spacer()
                         
-                        Text("\(viewModel.recentItems.count) items")
+                        Text("\(contentManager.allContent.count) items")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal)
                     
-                    if viewModel.recentItems.isEmpty {
+                    if contentManager.allContent.isEmpty {
                         VStack(spacing: 8) {
                             Image(systemName: "doc.badge.plus")
                                 .font(.title2)
@@ -581,7 +481,7 @@ struct InboxContentView: View {
             }
         }
         .onAppear {
-            viewModel.loadInitialContent()
+            // Content automatically loads via ContentManager
         }
     }
     
@@ -640,18 +540,18 @@ struct InboxContentView: View {
                         
                         Spacer()
                         
-                        Text("\(viewModel.recentItems.count)")
+                        Text("\(contentManager.allContent.count)")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal)
                     
                     LazyVStack(spacing: 4) {
-                        ForEach(viewModel.recentItems.prefix(8)) { item in
+                        ForEach(contentManager.allContent.prefix(8)) { item in
                             CompactContentRowView(
                                 item: item,
-                                onFavoriteToggle: { viewModel.toggleFavorite(for: item) },
-                                onDelete: { viewModel.deleteItem(item) }
+                                onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
+                                onDelete: { /* TODO: Implement delete */ }
                             )
                             .padding(.horizontal)
                         }
@@ -662,7 +562,7 @@ struct InboxContentView: View {
             }
         }
         .onAppear {
-            viewModel.loadInitialContent()
+            // Content automatically loads via ContentManager
         }
     }
     
@@ -757,7 +657,7 @@ struct InboxContentView: View {
             }
         }
         .onAppear {
-            viewModel.loadInitialContent()
+            // Content automatically loads via ContentManager
         }
     }
     
@@ -825,7 +725,7 @@ struct InboxContentView: View {
                         
                         Spacer()
                         
-                        Text("\(viewModel.recentItems.count) items")
+                        Text("\(contentManager.allContent.count) items")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -835,15 +735,15 @@ struct InboxContentView: View {
                         GridItem(.flexible(), spacing: 12),
                         GridItem(.flexible(), spacing: 12)
                     ], spacing: 12) {
-                        ForEach(viewModel.recentItems.prefix(10)) { item in
+                        ForEach(contentManager.allContent.prefix(10)) { item in
                             GridContentCard(item: item)
                                 .contextMenu {
                                     ContentContextMenu(
                                         item: item,
-                                        onFavoriteToggle: { viewModel.toggleFavorite(for: item) },
+                                        onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
                                         onEdit: { /* Handle edit */ },
                                         onShare: { /* Handle share */ },
-                                        onDelete: { viewModel.deleteItem(item) }
+                                        onDelete: { /* TODO: Implement delete */ }
                                     )
                                 }
                         }
@@ -855,16 +755,16 @@ struct InboxContentView: View {
             }
         }
         .onAppear {
-            viewModel.loadInitialContent()
+            // Content automatically loads via ContentManager
         }
     }
     
     // Group content by source
     private var contentBySource: [ContentSourceGroup] {
-        let grouped = Dictionary(grouping: viewModel.recentItems) { $0.sourceApp }
+        let grouped = Dictionary(grouping: contentManager.allContent) { $0.source }
         return grouped.compactMap { (source, items) in
             ContentSourceGroup(
-                source: source,
+                source: AppSource(rawValue: source) ?? .other,
                 items: Array(items.sorted { $0.timestamp > $1.timestamp }.prefix(5)) // Show max 5 items per source, sorted by newest first
             )
         }.sorted { $0.source.displayName < $1.source.displayName }
@@ -1041,7 +941,7 @@ struct InboxDashboardView: View {
     
     // Group content by source
     private var contentBySource: [ContentSourceGroup] {
-        let grouped = Dictionary(grouping: viewModel.recentItems) { $0.sourceApp }
+        let grouped = Dictionary(grouping: contentManager.allContent) { $0.sourceApp }
         return grouped.compactMap { (source, items) in
             ContentSourceGroup(
                 source: source,
@@ -1261,15 +1161,15 @@ struct GridInboxView: View {
                         GridItem(.flexible(), spacing: 12),
                         GridItem(.flexible(), spacing: 12)
                     ], spacing: 12) {
-                        ForEach(viewModel.recentItems) { item in
+                        ForEach(contentManager.allContent) { item in
                             GridContentCard(item: item)
                                 .contextMenu {
                                     ContentContextMenu(
                                         item: item,
-                                        onFavoriteToggle: { viewModel.toggleFavorite(for: item) },
+                                        onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
                                         onEdit: { /* Handle edit */ },
                                         onShare: { /* Handle share */ },
-                                        onDelete: { viewModel.deleteItem(item) }
+                                        onDelete: { /* TODO: Implement delete */ }
                                     )
                                 }
                         }
@@ -1341,11 +1241,11 @@ struct CompactInboxView: View {
                     .padding(.horizontal)
                     
                     LazyVStack(spacing: 4) {
-                        ForEach(viewModel.recentItems) { item in
+                        ForEach(contentManager.allContent) { item in
                             CompactContentRowView(
                                 item: item,
-                                onFavoriteToggle: { viewModel.toggleFavorite(for: item) },
-                                onDelete: { viewModel.deleteItem(item) }
+                                onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
+                                onDelete: { /* TODO: Implement delete */ }
                             )
                             .padding(.horizontal)
                         }
@@ -1422,11 +1322,11 @@ struct DetailedInboxView: View {
                     .padding(.horizontal)
                     
                     LazyVStack(spacing: 8) {
-                        ForEach(viewModel.recentItems) { item in
+                        ForEach(contentManager.allContent) { item in
                             DetailedContentRowView(
                                 item: item,
-                                onFavoriteToggle: { viewModel.toggleFavorite(for: item) },
-                                onDelete: { viewModel.deleteItem(item) }
+                                onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
+                                onDelete: { /* TODO: Implement delete */ }
                             )
                             .padding(.horizontal)
                         }
