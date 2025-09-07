@@ -487,17 +487,4 @@ struct ContentNodeData: Identifiable, Hashable {
     }
 }
 
-enum ProcessingStatus: String, CaseIterable {
-    case pending = "pending"
-    case processing = "processing"
-    case completed = "completed"
-    case failed = "failed"
-}
-
-enum ContentType: String, CaseIterable {
-    case text = "text"
-    case image = "image"
-    case pdf = "pdf"
-    case web = "web"
-    case mixed = "mixed"
-}
+// ProcessingStatus and ContentType are defined in SimpleModels.swift

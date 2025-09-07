@@ -10,7 +10,7 @@ import SwiftUI
 struct SearchFiltersView: View {
     @Environment(\.dismiss) private var dismiss
     
-    @Binding var selectedContentTypes: Set<ContentType>
+    @Binding var selectedContentTypes: Set<SnapNotion.ContentType>
     @Binding var selectedSources: Set<String>
     @Binding var dateRange: ClosedRange<Date>?
     @Binding var minimumRelevanceScore: Double
@@ -20,7 +20,7 @@ struct SearchFiltersView: View {
     @State private var endDate = Date()
     
     private let availableSources = ["safari", "clipboard", "camera", "photos", "other"]
-    private let allContentTypes: [ContentType] = [.text, .image, .web, .pdf, .mixed]
+    private let allContentTypes: [SnapNotion.ContentType] = [.text, .image, .web, .pdf, .mixed]
     
     var body: some View {
         NavigationView {
@@ -274,9 +274,9 @@ struct SearchFiltersView: View {
 
 #Preview {
     SearchFiltersView(
-        selectedContentTypes: .constant(Set<ContentType>()),
-        selectedSources: .constant(Set<String>()),
-        dateRange: .constant(nil),
-        minimumRelevanceScore: .constant(0.3)
+        selectedContentTypes: Binding.constant(Set<SnapNotion.ContentType>()),
+        selectedSources: Binding.constant(Set<String>()),
+        dateRange: Binding.constant(nil as ClosedRange<Date>?),
+        minimumRelevanceScore: Binding.constant(0.3)
     )
 }
