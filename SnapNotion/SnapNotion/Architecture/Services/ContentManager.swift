@@ -79,8 +79,8 @@ class ContentManager: ObservableObject {
         isProcessing = true
         defer { isProcessing = false }
         
-        return try await processImageContent(image, source: .photoLibrary)
-            .flatMap { try await saveContentNode($0) }
+        let contentData = try await processImageContent(image, source: .photoLibrary)
+        return try await saveContentNode(contentData)
     }
     
     func createContentFromText(_ text: String) async throws -> ContentNodeData {
@@ -107,8 +107,8 @@ class ContentManager: ObservableObject {
         isProcessing = true
         defer { isProcessing = false }
         
-        return try await processURLContent(url)
-            .flatMap { try await saveContentNode($0) }
+        let contentData = try await processURLContent(url)
+        return try await saveContentNode(contentData)
     }
     
     func createContentFromClipboard() async throws -> ContentNodeData? {
@@ -126,8 +126,8 @@ class ContentManager: ObservableObject {
         isProcessing = true
         defer { isProcessing = false }
         
-        return try await processFileContent(url)
-            .flatMap { try await saveContentNode($0) }
+        let contentData = try await processFileContent(url)
+        return try await saveContentNode(contentData)
     }
     
     // MARK: - Content Processing
@@ -411,7 +411,7 @@ class ContentManager: ObservableObject {
             source: node.sourceApp ?? "unknown",
             sourceURL: node.sourceURL,
             isFavorite: node.isFavorite,
-            processingStatus: ProcessingStatus(rawValue: node.processingStatus ?? "") ?? .pending,
+            processingStatus: ProcessingStatusType(rawValue: node.processingStatus ?? "") ?? .pending,
             aiConfidence: node.aiConfidence,
             imageData: node.contentData,
             ocrText: node.ocrText
@@ -465,12 +465,12 @@ struct ContentNodeData: Identifiable, Hashable {
     let source: String
     let sourceURL: String?
     let isFavorite: Bool
-    let processingStatus: ProcessingStatus
+    let processingStatus: ProcessingStatusType
     let aiConfidence: Double?
     let imageData: Data?
     let ocrText: String?
     
-    init(id: UUID, title: String, preview: String, contentText: String? = nil, type: ContentType, timestamp: Date, source: String, sourceURL: String? = nil, isFavorite: Bool = false, processingStatus: ProcessingStatus = .pending, aiConfidence: Double? = nil, imageData: Data? = nil, ocrText: String? = nil) {
+    init(id: UUID, title: String, preview: String, contentText: String? = nil, type: ContentType, timestamp: Date, source: String, sourceURL: String? = nil, isFavorite: Bool = false, processingStatus: ProcessingStatusType = .pending, aiConfidence: Double? = nil, imageData: Data? = nil, ocrText: String? = nil) {
         self.id = id
         self.title = title
         self.preview = preview

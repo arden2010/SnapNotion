@@ -75,14 +75,9 @@ extension ContentItem {
 // MARK: - ContentNodeData Extensions for UI Compatibility
 
 extension ContentNodeData {
-    // Bridge to work with existing UI components
+    // Bridge to work with existing UI components - processingStatus is already ProcessingStatusType
     var processingStatusType: ProcessingStatusType {
-        switch processingStatus {
-        case .pending: return .pending
-        case .processing: return .processing
-        case .completed: return .completed
-        case .failed: return .failed
-        }
+        return processingStatus
     }
     
     var sourceApp: AppSource {

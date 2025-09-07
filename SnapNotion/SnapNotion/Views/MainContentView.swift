@@ -549,7 +549,7 @@ struct InboxContentView: View {
                     LazyVStack(spacing: 4) {
                         ForEach(contentManager.allContent.prefix(8)) { item in
                             CompactContentRowView(
-                                item: item,
+                                item: item.asContentItem(),
                                 onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
                                 onDelete: { /* TODO: Implement delete */ }
                             )
@@ -644,8 +644,8 @@ struct InboxContentView: View {
                             ForEach(sourceGroup.items) { item in
                                 DetailedContentRowView(
                                     item: item,
-                                    onFavoriteToggle: { viewModel.toggleFavorite(for: item) },
-                                    onDelete: { viewModel.deleteItem(item) }
+                                    onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
+                                    onDelete: { /* TODO: Implement delete */ }
                                 )
                                 .padding(.horizontal)
                             }
@@ -736,10 +736,10 @@ struct InboxContentView: View {
                         GridItem(.flexible(), spacing: 12)
                     ], spacing: 12) {
                         ForEach(contentManager.allContent.prefix(10)) { item in
-                            GridContentCard(item: item)
+                            GridContentCard(item: item.asContentItem())
                                 .contextMenu {
                                     ContentContextMenu(
-                                        item: item,
+                                        item: item.asContentItem(),
                                         onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
                                         onEdit: { /* Handle edit */ },
                                         onShare: { /* Handle share */ },
@@ -765,7 +765,7 @@ struct InboxContentView: View {
         return grouped.compactMap { (source, items) in
             ContentSourceGroup(
                 source: AppSource(rawValue: source) ?? .other,
-                items: Array(items.sorted { $0.timestamp > $1.timestamp }.prefix(5)) // Show max 5 items per source, sorted by newest first
+                items: Array(items.sorted { $0.timestamp > $1.timestamp }.prefix(5).map { $0.asContentItem() }) // Show max 5 items per source, sorted by newest first
             )
         }.sorted { $0.source.displayName < $1.source.displayName }
     }
@@ -858,98 +858,7 @@ struct SourceContentSection: View {
     }
 }
 
-// MARK: - Inbox Dashboard View (Legacy - keeping for reference)
-struct InboxDashboardView: View {
-    @ObservedObject var viewModel: ContentViewModel
-    @StateObject private var taskManager = TaskManager()
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Recent Tasks Section
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "clock.badge.exclamationmark")
-                            .foregroundColor(.orange)
-                            .font(.title3)
-                        
-                        Text("What's Next")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
-                    if taskManager.upcomingTasks.isEmpty {
-                        VStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle")
-                                .font(.title2)
-                                .foregroundColor(.green)
-                            
-                            Text("All caught up!")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(height: 80)
-                        .frame(maxWidth: .infinity)
-                    } else {
-                        LazyVStack(spacing: 8) {
-                            ForEach(taskManager.upcomingTasks.prefix(3)) { task in
-                                TaskSummaryCard(task: task)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
-                
-                Divider()
-                    .padding(.horizontal)
-                
-                // Content by Source Section
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "folder.badge")
-                            .foregroundColor(.blue)
-                            .font(.title3)
-                        
-                        Text("Latest Captures")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
-                    LazyVStack(spacing: 12) {
-                        ForEach(contentBySource, id: \.source) { sourceGroup in
-                            ContentSourceSection(
-                                sourceGroup: sourceGroup,
-                                onItemTap: { item in
-                                    // Handle item tap
-                                }
-                            )
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                
-                Spacer(minLength: 100) // Space for FAB
-            }
-        }
-    }
-    
-    // Group content by source
-    private var contentBySource: [ContentSourceGroup] {
-        let grouped = Dictionary(grouping: contentManager.allContent) { $0.sourceApp }
-        return grouped.compactMap { (source, items) in
-            ContentSourceGroup(
-                source: source,
-                items: Array(items.prefix(3)) // Show max 3 items per source
-            )
-        }.sorted { $0.source.displayName < $1.source.displayName }
-    }
-}
+// MARK: - Legacy InboxDashboardView removed - functionality moved to InboxContentView
 
 // MARK: - Task Summary Card
 struct TaskSummaryCard: View {
@@ -1091,253 +1000,8 @@ extension SimpleTaskItem.TaskPriority {
     }
 }
 
-// MARK: - Grid Inbox View
-struct GridInboxView: View {
-    @ObservedObject var viewModel: ContentViewModel
-    @StateObject private var taskManager = TaskManager()
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Grid Tasks Section
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "clock.badge.exclamationmark")
-                            .foregroundColor(.orange)
-                            .font(.title3)
-                        
-                        Text("What's Next")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
-                    if taskManager.upcomingTasks.isEmpty {
-                        VStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle")
-                                .font(.title2)
-                                .foregroundColor(.green)
-                            
-                            Text("All caught up!")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(height: 80)
-                        .frame(maxWidth: .infinity)
-                    } else {
-                        // Tasks in horizontal scroll
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(taskManager.upcomingTasks.prefix(5)) { task in
-                                    GridTaskCard(task: task)
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                    }
-                }
-                
-                Divider()
-                    .padding(.horizontal)
-                
-                // Grid Content Section
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "folder.badge")
-                            .foregroundColor(.blue)
-                            .font(.title3)
-                        
-                        Text("Latest Captures")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
-                    LazyVGrid(columns: [
-                        GridItem(.flexible(), spacing: 12),
-                        GridItem(.flexible(), spacing: 12)
-                    ], spacing: 12) {
-                        ForEach(contentManager.allContent) { item in
-                            GridContentCard(item: item)
-                                .contextMenu {
-                                    ContentContextMenu(
-                                        item: item,
-                                        onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
-                                        onEdit: { /* Handle edit */ },
-                                        onShare: { /* Handle share */ },
-                                        onDelete: { /* TODO: Implement delete */ }
-                                    )
-                                }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                
-                Spacer(minLength: 100) // Space for FAB
-            }
-        }
-    }
-}
-
-// MARK: - Compact Inbox View
-struct CompactInboxView: View {
-    @ObservedObject var viewModel: ContentViewModel
-    @StateObject private var taskManager = TaskManager()
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Compact Tasks Section
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "clock.badge.exclamationmark")
-                            .foregroundColor(.orange)
-                            .font(.subheadline)
-                        
-                        Text("What's Next")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
-                    if taskManager.upcomingTasks.isEmpty {
-                        Text("All caught up!")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                    } else {
-                        LazyVStack(spacing: 4) {
-                            ForEach(taskManager.upcomingTasks.prefix(3)) { task in
-                                CompactTaskRow(task: task)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
-                
-                Divider()
-                    .padding(.horizontal)
-                
-                // Compact Content Section
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "folder.badge")
-                            .foregroundColor(.blue)
-                            .font(.subheadline)
-                        
-                        Text("Latest Captures")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
-                    LazyVStack(spacing: 4) {
-                        ForEach(contentManager.allContent) { item in
-                            CompactContentRowView(
-                                item: item,
-                                onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
-                                onDelete: { /* TODO: Implement delete */ }
-                            )
-                            .padding(.horizontal)
-                        }
-                    }
-                }
-                
-                Spacer(minLength: 100) // Space for FAB
-            }
-        }
-    }
-}
-
-// MARK: - Detailed Inbox View
-struct DetailedInboxView: View {
-    @ObservedObject var viewModel: ContentViewModel
-    @StateObject private var taskManager = TaskManager()
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Detailed Tasks Section
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "clock.badge.exclamationmark")
-                            .foregroundColor(.orange)
-                            .font(.title3)
-                        
-                        Text("What's Next")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
-                    if taskManager.upcomingTasks.isEmpty {
-                        VStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle")
-                                .font(.title3)
-                                .foregroundColor(.green)
-                            
-                            Text("All caught up!")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(height: 60)
-                        .frame(maxWidth: .infinity)
-                    } else {
-                        LazyVStack(spacing: 8) {
-                            ForEach(taskManager.upcomingTasks.prefix(3)) { task in
-                                DetailedTaskRow(task: task)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
-                
-                Divider()
-                    .padding(.horizontal)
-                
-                // Detailed Content Section
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "folder.badge")
-                            .foregroundColor(.blue)
-                            .font(.title3)
-                        
-                        Text("Latest Captures")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
-                    LazyVStack(spacing: 8) {
-                        ForEach(contentManager.allContent) { item in
-                            DetailedContentRowView(
-                                item: item,
-                                onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
-                                onDelete: { /* TODO: Implement delete */ }
-                            )
-                            .padding(.horizontal)
-                        }
-                    }
-                }
-                
-                Spacer(minLength: 100) // Space for FAB
-            }
-        }
-    }
-}
+// MARK: - Legacy Views Removed
+// GridInboxView, CompactInboxView, and DetailedInboxView functionality moved to InboxContentView
 
 // MARK: - Compact Task Row
 struct CompactTaskRow: View {
