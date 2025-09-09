@@ -12,22 +12,29 @@ import Combine
 
 struct ContentView: View {
     @StateObject private var screenshotManager = ScreenshotDetectionManager.shared
+    @State private var selectedTab = 0
+    @State private var shouldShowTasks = false
     
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             // Tab 1: All content (inbox style)
-            MainContentView()
+            MainContentView(onNavigateToTasks: {
+                selectedTab = 1 // Switch to Organize tab
+                shouldShowTasks = true
+            })
                 .tabItem {
                     Image(systemName: "tray.fill")
                     Text("Inbox")
                 }
+                .tag(0)
             
             // Tab 2: Organized content (library, favorites, tasks)
-            ContentTypesView()
+            ContentTypesView(shouldShowTasks: $shouldShowTasks)
                 .tabItem {
                     Image(systemName: "folder.fill")
                     Text("Organize")
                 }
+                .tag(1)
             
             // Tab 3: Knowledge connections
             KnowledgeGraphView()
@@ -35,6 +42,7 @@ struct ContentView: View {
                     Image(systemName: "brain.head.profile")
                     Text("Insights")
                 }
+                .tag(2)
         }
         .screenshotProcessingBanner(
             isShowing: $screenshotManager.showProcessingBanner,

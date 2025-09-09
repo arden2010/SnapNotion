@@ -8,14 +8,22 @@
 import SwiftUI
 
 struct MainContentView: View {
+    let onNavigateToTasks: () -> Void
+    
     @StateObject private var contentManager = ContentManager.shared
     @StateObject private var clipboardMonitor = ClipboardMonitor()
     @StateObject private var screenshotDetector = ScreenshotDetectionManager.shared
     @StateObject private var taskManager = TaskManager()
     
+    init(onNavigateToTasks: @escaping () -> Void = {}) {
+        self.onNavigateToTasks = onNavigateToTasks
+    }
+    
     @State private var showingAddSheet = false
     @State private var showingOptionsMenu = false
     @State private var selectedViewStyle: ContentViewStyle = .standard
+    @State private var selectedContent: ContentNodeData?
+    @State private var showingDetailView = false
     
     var body: some View {
         NavigationView {
@@ -35,8 +43,16 @@ struct MainContentView: View {
                     .padding(.horizontal)
                     
                     // Inbox View - Shows tasks and content by sources separately
-                    InboxContentView(viewStyle: selectedViewStyle, contentManager: contentManager, taskManager: taskManager)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    InboxContentView(
+                        viewStyle: selectedViewStyle, 
+                        contentManager: contentManager, 
+                        taskManager: taskManager,
+                        onContentTap: handleContentTap,
+                        onFavoriteToggle: handleFavoriteToggle,
+                        onContentDelete: handleContentDelete,
+                        onNavigateToTasks: onNavigateToTasks
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .navigationTitle("Inbox")
                 .toolbar {
@@ -81,6 +97,11 @@ struct MainContentView: View {
         .sheet(isPresented: $showingOptionsMenu) {
             ContentOptionsMenu()
         }
+        .sheet(isPresented: $showingDetailView) {
+            if let content = selectedContent {
+                ContentDetailView(content: content, contentManager: contentManager)
+            }
+        }
         .overlay {
             if contentManager.isProcessing {
                 ProcessingOverlay(message: "Processing content...")
@@ -111,6 +132,27 @@ struct MainContentView: View {
                 // Content successfully processed from clipboard
             }
         }
+    }
+    
+    // MARK: - Content Interaction Handlers
+    
+    private func handleContentTap(_ content: ContentNodeData) {
+        selectedContent = content
+        showingDetailView = true
+    }
+    
+    private func handleFavoriteToggle(for contentId: UUID) {
+        // TODO: Implement favorite toggle in ContentManager
+        print("Toggle favorite for content: \(contentId)")
+        // For now, just reload content
+        contentManager.loadAllContent()
+    }
+    
+    private func handleContentDelete(_ contentId: UUID) {
+        // TODO: Implement deletion in ContentManager
+        print("Delete content: \(contentId)")
+        // For now, just reload content
+        contentManager.loadAllContent()
     }
 }
 
@@ -143,6 +185,7 @@ enum ContentViewStyle: String, CaseIterable {
 // MARK: - Grid Content Card
 struct GridContentCard: View {
     let item: ContentItem
+    let onTap: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -192,6 +235,10 @@ struct GridContentCard: View {
         .frame(height: 160)
         .background(Color(.secondarySystemBackground))
         .cornerRadius(12)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
     }
 }
 
@@ -200,6 +247,7 @@ struct CompactContentRowView: View {
     let item: ContentItem
     let onFavoriteToggle: () -> Void
     let onDelete: () -> Void
+    let onTap: () -> Void
     
     var body: some View {
         HStack(spacing: 12) {
@@ -235,6 +283,10 @@ struct CompactContentRowView: View {
             }
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
     }
 }
 
@@ -243,6 +295,7 @@ struct DetailedContentRowView: View {
     let item: ContentItem
     let onFavoriteToggle: () -> Void
     let onDelete: () -> Void
+    let onTap: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -315,6 +368,10 @@ struct DetailedContentRowView: View {
             }
         }
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
     }
 }
 
@@ -369,6 +426,10 @@ struct InboxContentView: View {
     let viewStyle: ContentViewStyle
     @ObservedObject var contentManager: ContentManager
     @ObservedObject var taskManager: TaskManager
+    let onContentTap: (ContentNodeData) -> Void
+    let onFavoriteToggle: (UUID) -> Void
+    let onContentDelete: (UUID) -> Void
+    let onNavigateToTasks: () -> Void
     
     var body: some View {
         switch viewStyle {
@@ -397,12 +458,32 @@ struct InboxContentView: View {
                         Text("What's Next")
                             .font(.headline)
                             .fontWeight(.semibold)
+                            .foregroundColor(.primary)
                         
                         Spacer()
                         
-                        Text("\(taskManager.tasks.filter { !$0.isCompleted }.count) active")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(taskManager.tasks.filter { !$0.isCompleted }.count) active")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            if taskManager.tasks.count > 5 {
+                                Button(action: {
+                                    onNavigateToTasks()
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Text("View All")
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                     .padding(.horizontal)
                     
@@ -421,7 +502,13 @@ struct InboxContentView: View {
                     } else {
                         LazyVStack(spacing: 8) {
                             ForEach(taskManager.tasks.prefix(5)) { task in
-                                TaskSummaryCard(task: task)
+                                TaskSummaryCard(
+                                    task: task, 
+                                    onNavigateToTasks: onNavigateToTasks,
+                                    onTaskUpdate: { updatedTask in
+                                        taskManager.updateTask(updatedTask)
+                                    }
+                                )
                             }
                         }
                         .padding(.horizontal)
@@ -468,7 +555,9 @@ struct InboxContentView: View {
                                 SourceContentSection(
                                     sourceGroup: sourceGroup,
                                     onItemTap: { item in
-                                        // Handle item tap
+                                        if let contentData = findContentData(for: item) {
+                                            onContentTap(contentData)
+                                        }
                                     }
                                 )
                             }
@@ -499,12 +588,32 @@ struct InboxContentView: View {
                         Text("What's Next")
                             .font(.subheadline)
                             .fontWeight(.semibold)
+                            .foregroundColor(.primary)
                         
                         Spacer()
                         
-                        Text("\(taskManager.tasks.filter { !$0.isCompleted }.count)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 4) {
+                            Text("\(taskManager.tasks.filter { !$0.isCompleted }.count)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            
+                            if taskManager.tasks.count > 3 {
+                                Button(action: {
+                                    onNavigateToTasks()
+                                }) {
+                                    HStack(spacing: 2) {
+                                        Text("View All")
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                     .padding(.horizontal)
                     
@@ -517,7 +626,13 @@ struct InboxContentView: View {
                     } else {
                         LazyVStack(spacing: 4) {
                             ForEach(taskManager.tasks.prefix(3)) { task in
-                                CompactTaskRow(task: task)
+                                CompactTaskRow(
+                                    task: task, 
+                                    onNavigateToTasks: onNavigateToTasks,
+                                    onTaskUpdate: { updatedTask in
+                                        taskManager.updateTask(updatedTask)
+                                    }
+                                )
                             }
                         }
                         .padding(.horizontal)
@@ -550,8 +665,9 @@ struct InboxContentView: View {
                         ForEach(contentManager.allContent.prefix(8)) { item in
                             CompactContentRowView(
                                 item: item.asContentItem(),
-                                onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
-                                onDelete: { /* TODO: Implement delete */ }
+                                onFavoriteToggle: { onFavoriteToggle(item.id) },
+                                onDelete: { onContentDelete(item.id) },
+                                onTap: { onContentTap(item) }
                             )
                             .padding(.horizontal)
                         }
@@ -580,6 +696,7 @@ struct InboxContentView: View {
                         Text("What's Next")
                             .font(.headline)
                             .fontWeight(.semibold)
+                            .foregroundColor(.primary)
                         
                         Spacer()
                         
@@ -588,9 +705,28 @@ struct InboxContentView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
-                            Text("\(taskManager.tasks.filter { $0.isCompleted }.count) completed")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                            HStack(spacing: 4) {
+                                Text("\(taskManager.tasks.filter { $0.isCompleted }.count) completed")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                
+                                if taskManager.tasks.count > 5 {
+                                    Button(action: {
+                                        onNavigateToTasks()
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Text("View All")
+                                                .font(.caption2)
+                                                .foregroundColor(.blue)
+                                            
+                                            Image(systemName: "chevron.right")
+                                                .font(.caption2)
+                                                .foregroundColor(.blue)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal)
@@ -610,7 +746,13 @@ struct InboxContentView: View {
                     } else {
                         LazyVStack(spacing: 8) {
                             ForEach(taskManager.tasks.prefix(5)) { task in
-                                DetailedTaskRow(task: task)
+                                DetailedTaskRow(
+                                    task: task, 
+                                    onNavigateToTasks: onNavigateToTasks,
+                                    onTaskUpdate: { updatedTask in
+                                        taskManager.updateTask(updatedTask)
+                                    }
+                                )
                             }
                         }
                         .padding(.horizontal)
@@ -644,8 +786,13 @@ struct InboxContentView: View {
                             ForEach(sourceGroup.items) { item in
                                 DetailedContentRowView(
                                     item: item,
-                                    onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
-                                    onDelete: { /* TODO: Implement delete */ }
+                                    onFavoriteToggle: { onFavoriteToggle(item.id) },
+                                    onDelete: { onContentDelete(item.id) },
+                                    onTap: {
+                                        if let contentData = findContentData(for: item) {
+                                            onContentTap(contentData)
+                                        }
+                                    }
                                 )
                                 .padding(.horizontal)
                             }
@@ -675,12 +822,32 @@ struct InboxContentView: View {
                         Text("What's Next")
                             .font(.headline)
                             .fontWeight(.semibold)
+                            .foregroundColor(.primary)
                         
                         Spacer()
                         
-                        Text("\(taskManager.tasks.filter { !$0.isCompleted }.count) active")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 4) {
+                            Text("\(taskManager.tasks.filter { !$0.isCompleted }.count) active")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            if taskManager.tasks.count > 5 {
+                                Button(action: {
+                                    onNavigateToTasks()
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Text("View All")
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                     .padding(.horizontal)
                     
@@ -701,7 +868,13 @@ struct InboxContentView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
                                 ForEach(taskManager.tasks.prefix(5)) { task in
-                                    GridTaskCard(task: task)
+                                    GridTaskCard(
+                                        task: task, 
+                                        onNavigateToTasks: onNavigateToTasks,
+                                        onTaskUpdate: { updatedTask in
+                                            taskManager.updateTask(updatedTask)
+                                        }
+                                    )
                                 }
                             }
                             .padding(.horizontal)
@@ -736,14 +909,16 @@ struct InboxContentView: View {
                         GridItem(.flexible(), spacing: 12)
                     ], spacing: 12) {
                         ForEach(contentManager.allContent.prefix(10)) { item in
-                            GridContentCard(item: item.asContentItem())
+                            GridContentCard(item: item.asContentItem()) {
+                                onContentTap(item)
+                            }
                                 .contextMenu {
                                     ContentContextMenu(
                                         item: item.asContentItem(),
-                                        onFavoriteToggle: { /* TODO: Implement favorite toggle */ },
+                                        onFavoriteToggle: { onFavoriteToggle(item.id) },
                                         onEdit: { /* Handle edit */ },
                                         onShare: { /* Handle share */ },
-                                        onDelete: { /* TODO: Implement delete */ }
+                                        onDelete: { onContentDelete(item.id) }
                                     )
                                 }
                         }
@@ -768,6 +943,11 @@ struct InboxContentView: View {
                 items: Array(items.sorted { $0.timestamp > $1.timestamp }.prefix(5).map { $0.asContentItem() }) // Show max 5 items per source, sorted by newest first
             )
         }.sorted { $0.source.displayName < $1.source.displayName }
+    }
+    
+    // Helper function to find ContentNodeData from ContentItem
+    private func findContentData(for contentItem: ContentItem) -> ContentNodeData? {
+        return contentManager.allContent.first { $0.id == contentItem.id }
     }
 }
 
@@ -863,11 +1043,14 @@ struct SourceContentSection: View {
 // MARK: - Task Summary Card
 struct TaskSummaryCard: View {
     let task: SimpleTaskItem
+    let onNavigateToTasks: () -> Void
+    let onTaskUpdate: (SimpleTaskItem) -> Void
+    @State private var showingEditSheet = false
     
     var body: some View {
         HStack(spacing: 12) {
             Button(action: {
-                // Toggle completion
+                toggleTaskCompletion()
             }) {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .foregroundColor(task.isCompleted ? .green : .gray)
@@ -881,6 +1064,7 @@ struct TaskSummaryCard: View {
                     .fontWeight(.medium)
                     .strikethrough(task.isCompleted)
                     .lineLimit(1)
+                    .foregroundColor(.primary)
                 
                 HStack {
                     if let dueDate = task.dueDate {
@@ -905,6 +1089,40 @@ struct TaskSummaryCard: View {
         .padding(12)
         .background(Color(.secondarySystemBackground))
         .cornerRadius(8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            showingEditSheet = true
+        }
+        .contextMenu {
+            Button(action: {
+                showingEditSheet = true
+            }) {
+                Label("Edit Task", systemImage: "pencil")
+            }
+            
+            Button(action: toggleTaskCompletion) {
+                Label(task.isCompleted ? "Mark Incomplete" : "Mark Complete", 
+                      systemImage: task.isCompleted ? "circle" : "checkmark.circle")
+            }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            TaskEditView(task: task) { updatedTask in
+                onTaskUpdate(updatedTask)
+            }
+        }
+    }
+    
+    private func toggleTaskCompletion() {
+        let updatedTask = SimpleTaskItem(
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            isCompleted: !task.isCompleted,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            createdAt: task.createdAt
+        )
+        onTaskUpdate(updatedTask)
     }
 }
 
@@ -1006,53 +1224,92 @@ extension SimpleTaskItem.TaskPriority {
 // MARK: - Compact Task Row
 struct CompactTaskRow: View {
     let task: SimpleTaskItem
+    let onNavigateToTasks: () -> Void
+    let onTaskUpdate: (SimpleTaskItem) -> Void
+    @State private var showingEditSheet = false
     
     var body: some View {
         HStack(spacing: 8) {
-            Button(action: {
-                // Toggle completion
-            }) {
+            Button(action: toggleTaskCompletion) {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .foregroundColor(task.isCompleted ? .green : .gray)
                     .font(.subheadline)
             }
             .buttonStyle(.plain)
             
-            Text(task.title)
-                .font(.caption)
-                .fontWeight(.medium)
-                .strikethrough(task.isCompleted)
-                .lineLimit(1)
-            
-            Spacer()
-            
-            if let dueDate = task.dueDate {
-                Text(dueDate, style: .relative)
-                    .font(.caption2)
-                    .foregroundColor(dueDate < Date() ? .red : .secondary)
+            HStack {
+                Text(task.title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .strikethrough(task.isCompleted)
+                    .lineLimit(1)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                if let dueDate = task.dueDate {
+                    Text(dueDate, style: .relative)
+                        .font(.caption2)
+                        .foregroundColor(dueDate < Date() ? .red : .secondary)
+                }
+                
+                Circle()
+                    .fill(task.priority.color)
+                    .frame(width: 4, height: 4)
             }
-            
-            Circle()
-                .fill(task.priority.color)
-                .frame(width: 4, height: 4)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                showingEditSheet = true
+            }
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .background(Color(.secondarySystemBackground))
         .cornerRadius(6)
+        .contextMenu {
+            Button(action: {
+                showingEditSheet = true
+            }) {
+                Label("Edit Task", systemImage: "pencil")
+            }
+            
+            Button(action: toggleTaskCompletion) {
+                Label(task.isCompleted ? "Mark Incomplete" : "Mark Complete", 
+                      systemImage: task.isCompleted ? "circle" : "checkmark.circle")
+            }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            TaskEditView(task: task) { updatedTask in
+                onTaskUpdate(updatedTask)
+            }
+        }
+    }
+    
+    private func toggleTaskCompletion() {
+        let updatedTask = SimpleTaskItem(
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            isCompleted: !task.isCompleted,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            createdAt: task.createdAt
+        )
+        onTaskUpdate(updatedTask)
     }
 }
 
 // MARK: - Grid Task Card
 struct GridTaskCard: View {
     let task: SimpleTaskItem
+    let onNavigateToTasks: () -> Void
+    let onTaskUpdate: (SimpleTaskItem) -> Void
+    @State private var showingEditSheet = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Button(action: {
-                    // Toggle completion
-                }) {
+                Button(action: toggleTaskCompletion) {
                     Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                         .foregroundColor(task.isCompleted ? .green : .gray)
                         .font(.subheadline)
@@ -1064,42 +1321,80 @@ struct GridTaskCard: View {
                 PriorityBadge(priority: task.priority)
             }
             
-            Text(task.title)
-                .font(.caption)
-                .fontWeight(.medium)
-                .strikethrough(task.isCompleted)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-            
-            Spacer()
-            
-            if let dueDate = task.dueDate {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock")
-                        .font(.caption2)
-                    
-                    Text(dueDate, style: .relative)
-                        .font(.caption2)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(task.title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .strikethrough(task.isCompleted)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                if let dueDate = task.dueDate {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .font(.caption2)
+                        
+                        Text(dueDate, style: .relative)
+                            .font(.caption2)
+                    }
+                    .foregroundColor(dueDate < Date() ? .red : .secondary)
                 }
-                .foregroundColor(dueDate < Date() ? .red : .secondary)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                showingEditSheet = true
             }
         }
         .padding(12)
         .frame(width: 160, height: 120)
         .background(Color(.secondarySystemBackground))
         .cornerRadius(12)
+        .contextMenu {
+            Button(action: {
+                showingEditSheet = true
+            }) {
+                Label("Edit Task", systemImage: "pencil")
+            }
+            
+            Button(action: toggleTaskCompletion) {
+                Label(task.isCompleted ? "Mark Incomplete" : "Mark Complete", 
+                      systemImage: task.isCompleted ? "circle" : "checkmark.circle")
+            }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            TaskEditView(task: task) { updatedTask in
+                onTaskUpdate(updatedTask)
+            }
+        }
+    }
+    
+    private func toggleTaskCompletion() {
+        let updatedTask = SimpleTaskItem(
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            isCompleted: !task.isCompleted,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            createdAt: task.createdAt
+        )
+        onTaskUpdate(updatedTask)
     }
 }
 
 // MARK: - Detailed Task Row
 struct DetailedTaskRow: View {
     let task: SimpleTaskItem
+    let onNavigateToTasks: () -> Void
+    let onTaskUpdate: (SimpleTaskItem) -> Void
+    @State private var showingEditSheet = false
     
     var body: some View {
         HStack(spacing: 12) {
-            Button(action: {
-                // Toggle completion
-            }) {
+            Button(action: toggleTaskCompletion) {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .foregroundColor(task.isCompleted ? .green : .gray)
                     .font(.title3)
@@ -1112,6 +1407,7 @@ struct DetailedTaskRow: View {
                     .fontWeight(.medium)
                     .strikethrough(task.isCompleted)
                     .lineLimit(2)
+                    .foregroundColor(.primary)
                 
                 if !task.description.isEmpty {
                     Text(task.description)
@@ -1143,6 +1439,40 @@ struct DetailedTaskRow: View {
         .padding(12)
         .background(Color(.secondarySystemBackground))
         .cornerRadius(8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            showingEditSheet = true
+        }
+        .contextMenu {
+            Button(action: {
+                showingEditSheet = true
+            }) {
+                Label("Edit Task", systemImage: "pencil")
+            }
+            
+            Button(action: toggleTaskCompletion) {
+                Label(task.isCompleted ? "Mark Incomplete" : "Mark Complete", 
+                      systemImage: task.isCompleted ? "circle" : "checkmark.circle")
+            }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            TaskEditView(task: task) { updatedTask in
+                onTaskUpdate(updatedTask)
+            }
+        }
+    }
+    
+    private func toggleTaskCompletion() {
+        let updatedTask = SimpleTaskItem(
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            isCompleted: !task.isCompleted,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            createdAt: task.createdAt
+        )
+        onTaskUpdate(updatedTask)
     }
 }
 
